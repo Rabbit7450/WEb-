@@ -36,7 +36,7 @@ export default function AdminSettingsPage() {
   // Monetization Google Ads state
   const [adsConfig, setAdsConfig] = useState<GoogleAdsConfig>({
     enabled: true,
-    client_id: 'ca-pub-9876543210987654',
+    client_id: 'ca-pub-6370743227565174',
     hero_slot: '1234567890',
     sidebar_slot: '2345678901',
     infeed_slot: '3456789012',
@@ -223,7 +223,7 @@ export default function AdminSettingsPage() {
                   </Label>
                   <Input
                     id="client-id"
-                    placeholder="ca-pub-9876543210987654"
+                    placeholder="ca-pub-6370743227565174"
                     value={adsConfig.client_id}
                     onChange={(e) => setAdsConfig((prev) => ({ ...prev, client_id: e.target.value }))}
                     className="h-10 rounded-xl text-xs font-mono"
