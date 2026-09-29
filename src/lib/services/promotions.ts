@@ -249,18 +249,22 @@ export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): 
   return newUser;
 }
 
-export async function updateUserRole(id: string, role: UserRole): Promise<UserAccount> {
+export async function updateUser(id: string, data: Partial<UserAccount>): Promise<UserAccount> {
   const list = await getUsers();
   let updatedItem: UserAccount | null = null;
   const updated = list.map((u) => {
     if (u.id === id) {
-      updatedItem = { ...u, role };
+      updatedItem = { ...u, ...data };
       return updatedItem;
     }
     return u;
   });
   setStorageData('yaps_users', updated);
-  return updatedItem!;
+  return updatedItem || (data as UserAccount);
+}
+
+export async function updateUserRole(id: string, role: UserRole): Promise<UserAccount> {
+  return updateUser(id, { role });
 }
 
 export async function deleteUser(id: string): Promise<boolean> {

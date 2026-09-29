@@ -1,8 +1,11 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { useAuth } from '@/lib/auth/auth-context';
 import { Toaster } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -10,7 +13,18 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/admin/login';
+  const router = useRouter();
+  const { isLoggedIn, isLoading } = useAuth();
+  
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const isLoginPage = pathname === '/admin/login' || pathname === '/login';
+
+  useEffect(() => {
+    if (!isLoading && !isLoggedIn && !isLoginPage) {
+      router.push('/login');
+    }
+  }, [isLoading, isLoggedIn, isLoginPage, router]);
 
   if (isLoginPage) {
     return (
@@ -21,13 +35,28 @@ export default function AdminLayout({
     );
   }
 
+  if (isLoading || (!isLoggedIn && !isLoginPage)) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-xs text-slate-400 font-medium">Verificando sesión autorizada...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
-      {/* Sidebar */}
-      <AdminSidebar />
+    <div className="min-h-screen bg-background text-foreground flex relative overflow-x-hidden">
+      {/* Responsive Sidebar (Desktop & Mobile Drawer) */}
+      <AdminSidebar
+        isOpenMobile={isMobileOpen}
+        onCloseMobile={() => setIsMobileOpen(false)}
+      />
 
       {/* Main Content Area */}
-      <main className="flex-1 ml-64 min-h-screen flex flex-col bg-muted/20">
+      <main className="w-full md:ml-64 min-h-screen flex flex-col bg-muted/20 overflow-x-hidden">
+        {/* Inject mobile toggle handler into children via React clone or page props if needed */}
         {children}
       </main>
 

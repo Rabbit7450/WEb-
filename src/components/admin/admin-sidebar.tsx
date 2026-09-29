@@ -8,19 +8,23 @@ import {
   Building2, 
   FolderKanban, 
   Users,
-  Settings, 
   LogOut, 
   ExternalLink,
   Sparkles,
   ShieldCheck,
   User,
   DollarSign,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/lib/auth/auth-context';
-import { toast } from 'sonner';
+
+interface AdminSidebarProps {
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
+}
 
 interface NavItem {
   label: string;
@@ -35,14 +39,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Promociones', href: '/admin/promociones', icon: Tag, badge: 'Nuevas' },
   { label: 'Negocios', href: '/admin/negocios', icon: Building2 },
   { label: 'Categorías', href: '/admin/categorias', icon: FolderKanban, adminOnly: true },
-  { label: 'Usuarios y Roles', href: '/admin/usuarios', icon: Users, adminOnly: true, badge: 'Roles' },
+  { label: 'Gestión de Usuarios', href: '/admin/usuarios', icon: Users, adminOnly: true, badge: 'Roles' },
   { label: 'Publicidad & Ajustes', href: '/admin/configuracion', icon: DollarSign, badge: 'Google Ads' },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ isOpenMobile = false, onCloseMobile }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, role, logout, switchRole } = useAuth();
+  const { user, role, logout } = useAuth();
 
   const filteredItems = NAV_ITEMS.filter((item) => !item.adminOnly || role === 'admin');
 
@@ -51,11 +55,17 @@ export function AdminSidebar() {
     router.push('/login');
   };
 
-  return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-border/60 bg-card/95 backdrop-blur-xl transition-transform dark:bg-card/80">
+  const handleNavClick = () => {
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
+  const sidebarContent = (
+    <div className="flex h-full w-64 flex-col border-r border-border/60 bg-card/95 backdrop-blur-xl dark:bg-card/90 shadow-2xl md:shadow-none">
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-6 border-b border-border/40">
-        <Link href="/admin" className="flex items-center gap-2.5">
+        <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-purple-600 shadow-md shadow-primary/20">
             <span className="text-xl font-black text-white">Y</span>
           </div>
@@ -74,13 +84,24 @@ export function AdminSidebar() {
             </span>
           </div>
         </Link>
+
+        {/* Mobile Close Button */}
+        {onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            className="md:hidden p-1.5 text-muted-foreground hover:text-foreground rounded-lg"
+            title="Cerrar menú"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation Items */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5">
-        <div className="px-3 mb-2 flex items-center justify-between">
+        <div className="px-3 mb-2">
           <span className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-            {role === 'admin' ? 'Menú Administrador' : 'Menú de Usuario'}
+            {role === 'admin' ? 'Menú Administrador' : 'Menú Comercial'}
           </span>
         </div>
 
@@ -92,6 +113,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={handleNavClick}
               className={`group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ${
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 font-semibold'
@@ -120,13 +142,13 @@ export function AdminSidebar() {
         })}
       </div>
 
-      {/* Public Site Link Card */}
+      {/* Public Site Card */}
       <div className="p-4 mx-4 mb-3 rounded-2xl bg-gradient-to-br from-primary/10 via-purple-500/5 to-transparent border border-primary/20">
         <div className="flex items-center gap-2 text-xs font-semibold text-primary mb-1">
-          <Sparkles className="h-3.5 w-3.5" /> Sitio Público & Anuncios
+          <Sparkles className="h-3.5 w-3.5" /> Sitio Público & Ads
         </div>
         <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-          Ver sitio web con ofertas y banners de Google Ads.
+          Ver sitio web público con promociones y anuncios.
         </p>
         <Link href="/" target="_blank">
           <Button variant="outline" size="sm" className="w-full h-8 text-xs justify-center gap-1.5 border-primary/30 hover:bg-primary/10 hover:text-primary">
@@ -135,7 +157,7 @@ export function AdminSidebar() {
         </Link>
       </div>
 
-      {/* User Profile Footer */}
+      {/* User Footer */}
       <div className="border-t border-border/40 p-4 bg-muted/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -168,6 +190,28 @@ export function AdminSidebar() {
           </Button>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Fixed Sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 z-40 h-screen w-64 flex-col">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Sliding Drawer Overlay */}
+      {isOpenMobile && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={onCloseMobile}
+          />
+          <aside className="relative z-10 h-full animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
