@@ -10,6 +10,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Yaps — Promociones de Bolivia",
   description: "Todas las mejores promociones de Bolivia en un solo lugar",
+  other: {
+    "google-adsense-account": "ca-pub-6370743227565174",
+  },
 };
 
 export default function RootLayout({
@@ -20,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <meta name="google-adsense-account" content="ca-pub-6370743227565174" />
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6370743227565174"
