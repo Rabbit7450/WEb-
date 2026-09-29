@@ -5,6 +5,8 @@ export interface UserAccount {
   id: string;
   name: string;
   email: string;
+  password?: string;
+  avatar_url?: string;
   role: UserRole;
   business_id?: string;
   business_name?: string;

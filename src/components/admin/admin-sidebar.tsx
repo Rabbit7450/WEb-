@@ -15,10 +15,11 @@ import {
   User,
   DollarSign,
   ChevronRight,
+  UserCircle,
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/lib/auth/auth-context';
 
 interface AdminSidebarProps {
@@ -41,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Categorías', href: '/admin/categorias', icon: FolderKanban, adminOnly: true },
   { label: 'Gestión de Usuarios', href: '/admin/usuarios', icon: Users, adminOnly: true, badge: 'Roles' },
   { label: 'Publicidad & Ajustes', href: '/admin/configuracion', icon: DollarSign, badge: 'Google Ads' },
+  { label: 'Mi Perfil', href: '/admin/perfil', icon: UserCircle },
 ];
 
 export function AdminSidebar({ isOpenMobile = false, onCloseMobile }: AdminSidebarProps) {
@@ -157,17 +159,18 @@ export function AdminSidebar({ isOpenMobile = false, onCloseMobile }: AdminSideb
         </Link>
       </div>
 
-      {/* User Footer */}
+      {/* User Profile Footer */}
       <div className="border-t border-border/40 p-4 bg-muted/30">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <Link href="/admin/perfil" onClick={handleNavClick} className="flex items-center gap-2.5 min-w-0 group cursor-pointer flex-1">
             <Avatar className="h-9 w-9 border border-primary/30 shadow-sm shrink-0">
+              {user?.avatar_url && <AvatarImage src={user.avatar_url} alt={user.name} />}
               <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xs">
-                {role === 'admin' ? 'AD' : 'US'}
+                {user?.name ? user.name.charAt(0) : (role === 'admin' ? 'AD' : 'US')}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col truncate">
-              <span className="text-xs font-semibold text-foreground truncate flex items-center gap-1">
+              <span className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1">
                 {user?.name || (role === 'admin' ? 'Admin Yaps' : 'Usuario Yaps')}
                 {role === 'admin' ? (
                   <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0 inline" />
@@ -177,7 +180,7 @@ export function AdminSidebar({ isOpenMobile = false, onCloseMobile }: AdminSideb
               </span>
               <span className="text-[10px] text-muted-foreground truncate">{user?.email || 'admin@yaps.bo'}</span>
             </div>
-          </div>
+          </Link>
           
           <Button
             variant="ghost"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, User, ShieldCheck, Mail, Building2 } from 'lucide-react';
+import { X, User, ShieldCheck, Mail, Building2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ interface UserModalProps {
 export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [] }: UserModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('user');
   const [businessId, setBusinessId] = useState('');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
@@ -28,12 +29,14 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
     if (userAccount) {
       setName(userAccount.name || '');
       setEmail(userAccount.email || '');
+      setPassword(userAccount.password || '');
       setRole(userAccount.role || 'user');
       setBusinessId(userAccount.business_id || '');
       setStatus(userAccount.status || 'active');
     } else {
       setName('');
       setEmail('');
+      setPassword('');
       setRole('user');
       setBusinessId(businesses[0]?.id || '');
       setStatus('active');
@@ -47,18 +50,24 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
       return;
     }
 
+    if (!userAccount && !password.trim()) {
+      toast.error('Debes asignar una contraseña para la nueva cuenta');
+      return;
+    }
+
     setLoading(true);
     try {
       const selectedBiz = businesses.find((b) => b.id === businessId);
       await onSave({
         name,
         email,
+        password: password.trim() || '123456',
         role,
         business_id: role === 'user' ? businessId : undefined,
         business_name: role === 'user' ? selectedBiz?.name : undefined,
         status,
       });
-      toast.success(userAccount ? '¡Usuario actualizado!' : '¡Usuario creado exitosamente!');
+      toast.success(userAccount ? '¡Usuario actualizado!' : '¡Usuario creado exitosamente con sus credenciales!');
       onClose();
     } catch {
       toast.error('Ocurrió un error al guardar el usuario');
@@ -80,10 +89,10 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
             </div>
             <div>
               <h2 className="font-bold text-base text-foreground">
-                {userAccount ? 'Editar Usuario y Rol' : 'Crear Nuevo Usuario'}
+                {userAccount ? 'Editar Usuario y Credenciales' : 'Crear Nuevo Usuario y Credenciales'}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Gestión de permisos de acceso (Administrador / Usuario)
+                Define el nombre, correo, clave y rol de acceso
               </p>
             </div>
           </div>
@@ -98,7 +107,7 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
             <Label htmlFor="usr-name" className="text-xs font-semibold">Nombre Completo *</Label>
             <Input
               id="usr-name"
-              placeholder="Ej. Juan Pérez"
+              placeholder="Ej. Carlos Rodríguez"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="h-10 rounded-xl text-xs"
@@ -106,19 +115,36 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="usr-email" className="text-xs font-semibold flex items-center gap-1">
-              <Mail className="h-3.5 w-3.5 text-primary" /> Correo Electrónico *
-            </Label>
-            <Input
-              id="usr-email"
-              type="email"
-              placeholder="usuario@yaps.bo"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 rounded-xl text-xs"
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="usr-email" className="text-xs font-semibold flex items-center gap-1">
+                <Mail className="h-3.5 w-3.5 text-primary" /> Correo Electrónico *
+              </Label>
+              <Input
+                id="usr-email"
+                type="email"
+                placeholder="usuario@yaps.bo"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-10 rounded-xl text-xs"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="usr-pass" className="text-xs font-semibold flex items-center gap-1">
+                <Lock className="h-3.5 w-3.5 text-primary" /> Contraseña *
+              </Label>
+              <Input
+                id="usr-pass"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-10 rounded-xl text-xs"
+                required={!userAccount}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

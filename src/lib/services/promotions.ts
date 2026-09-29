@@ -80,9 +80,9 @@ const INITIAL_CATEGORIES: Category[] = [
 ];
 
 const INITIAL_USERS: UserAccount[] = [
-  { id: 'u1', name: 'Administrador Principal', email: 'admin@yaps.bo', role: 'admin', status: 'active', created_at: new Date().toISOString() },
-  { id: 'u2', name: 'Gerente Burger Craft', email: 'contacto@burgercraft.bo', role: 'user', business_id: 'b1', business_name: 'Burger Craft House', status: 'active', created_at: new Date().toISOString() },
-  { id: 'u3', name: 'Ventas TechStore', email: 'ventas@techstore.bo', role: 'user', business_id: 'b2', business_name: 'TechStore Bolivia', status: 'active', created_at: new Date().toISOString() },
+  { id: 'u1', name: 'Administrador Principal', email: 'admin@yaps.bo', password: '123456', role: 'admin', status: 'active', created_at: new Date().toISOString() },
+  { id: 'u2', name: 'Gerente Burger Craft', email: 'contacto@burgercraft.bo', password: '123456', role: 'user', business_id: 'b1', business_name: 'Burger Craft House', status: 'active', created_at: new Date().toISOString() },
+  { id: 'u3', name: 'Ventas TechStore', email: 'ventas@techstore.bo', password: '123456', role: 'user', business_id: 'b2', business_name: 'TechStore Bolivia', status: 'active', created_at: new Date().toISOString() },
 ];
 
 const INITIAL_ADS_CONFIG: GoogleAdsConfig = {
@@ -98,7 +98,7 @@ const INITIAL_ADS_CONFIG: GoogleAdsConfig = {
   clicks: 1840,
 };
 
-// Helper for LocalStorage cache
+// LocalStorage Persistence Helper
 function getStorageData<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
@@ -114,29 +114,98 @@ function setStorageData<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
-    console.error('Error saving to storage', e);
+    console.error('Error saving to local storage', e);
   }
 }
 
 // PROMOTIONS
 export async function getPromotions(): Promise<Promotion[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('promotions')
+      .select('*, businesses(name), categories(name)');
+
+    if (!error && data && data.length > 0) {
+      const formatted: Promotion[] = data.map((item: any) => ({
+        id: String(item.id),
+        title: item.title,
+        description: item.description || '',
+        discount_percentage: item.discount_percentage,
+        original_price: item.original_price,
+        offer_price: item.offer_price,
+        image_url: item.image_url,
+        status: item.status || 'published',
+        business_id: String(item.business_id),
+        business_name: item.businesses?.name || item.business_name || 'Negocio Afiliado',
+        category_id: String(item.category_id),
+        category_name: item.categories?.name || item.category_name || 'General',
+        city_name: item.city_name || 'La Paz',
+        start_date: item.start_date,
+        end_date: item.end_date,
+        coupon_code: item.coupon_code,
+        views_count: item.views_count || 0,
+        created_at: item.created_at || new Date().toISOString(),
+      }));
+      setStorageData('yaps_promotions', formatted);
+      return formatted;
+    }
+  } catch (err) {
+    console.log('Usando almacenamiento sincronizado de promociones:', err);
+  }
   return getStorageData<Promotion[]>('yaps_promotions', INITIAL_PROMOTIONS);
 }
 
 export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'>): Promise<Promotion> {
-  const list = await getPromotions();
   const newPromo: Promotion = {
     ...promo,
     id: `p-${Date.now()}`,
     created_at: new Date().toISOString(),
     views_count: 0
   };
+
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('promotions')
+      .insert([{
+        title: promo.title,
+        description: promo.description,
+        discount_percentage: promo.discount_percentage,
+        original_price: promo.original_price,
+        offer_price: promo.offer_price,
+        image_url: promo.image_url,
+        status: promo.status,
+        business_id: promo.business_id,
+        category_id: promo.category_id,
+        start_date: promo.start_date,
+        end_date: promo.end_date,
+        coupon_code: promo.coupon_code
+      }])
+      .select()
+      .single();
+
+    if (!error && data) {
+      newPromo.id = String(data.id);
+    }
+  } catch (err) {
+    console.log('Almacenando promoción en base de datos local:', err);
+  }
+
+  const list = await getPromotions();
   const updated = [newPromo, ...list];
   setStorageData('yaps_promotions', updated);
   return newPromo;
 }
 
 export async function updatePromotion(id: string, promo: Partial<Promotion>): Promise<Promotion> {
+  try {
+    const supabase = createClient();
+    await supabase.from('promotions').update(promo).eq('id', id);
+  } catch (err) {
+    console.log('Actualizando promoción en base de datos local:', err);
+  }
+
   const list = await getPromotions();
   let updatedItem: Promotion | null = null;
   const updated = list.map((p) => {
@@ -151,6 +220,13 @@ export async function updatePromotion(id: string, promo: Partial<Promotion>): Pr
 }
 
 export async function deletePromotion(id: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    await supabase.from('promotions').delete().eq('id', id);
+  } catch (err) {
+    console.log('Eliminando promoción de base de datos local:', err);
+  }
+
   const list = await getPromotions();
   const filtered = list.filter((p) => p.id !== id);
   setStorageData('yaps_promotions', filtered);
@@ -159,22 +235,50 @@ export async function deletePromotion(id: string): Promise<boolean> {
 
 // BUSINESSES
 export async function getBusinesses(): Promise<Business[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('businesses').select('*');
+    if (!error && data && data.length > 0) {
+      setStorageData('yaps_businesses', data);
+      return data;
+    }
+  } catch (err) {
+    console.log('Usando almacenamiento de negocios:', err);
+  }
   return getStorageData<Business[]>('yaps_businesses', INITIAL_BUSINESSES);
 }
 
 export async function createBusiness(data: Omit<Business, 'id'>): Promise<Business> {
-  const list = await getBusinesses();
   const newBiz: Business = {
     ...data,
     id: `b-${Date.now()}`,
     is_verified: data.is_verified ?? true,
   };
+
+  try {
+    const supabase = createClient();
+    const { data: res, error } = await supabase.from('businesses').insert([data]).select().single();
+    if (!error && res) {
+      newBiz.id = String(res.id);
+    }
+  } catch (err) {
+    console.log('Almacenando negocio localmente:', err);
+  }
+
+  const list = await getBusinesses();
   const updated = [newBiz, ...list];
   setStorageData('yaps_businesses', updated);
   return newBiz;
 }
 
 export async function updateBusiness(id: string, data: Partial<Business>): Promise<Business> {
+  try {
+    const supabase = createClient();
+    await supabase.from('businesses').update(data).eq('id', id);
+  } catch (err) {
+    console.log('Actualizando negocio localmente:', err);
+  }
+
   const list = await getBusinesses();
   let updatedItem: Business | null = null;
   const updated = list.map((b) => {
@@ -189,6 +293,13 @@ export async function updateBusiness(id: string, data: Partial<Business>): Promi
 }
 
 export async function deleteBusiness(id: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    await supabase.from('businesses').delete().eq('id', id);
+  } catch (err) {
+    console.log('Eliminando negocio localmente:', err);
+  }
+
   const list = await getBusinesses();
   const filtered = list.filter((b) => b.id !== id);
   setStorageData('yaps_businesses', filtered);
@@ -197,21 +308,49 @@ export async function deleteBusiness(id: string): Promise<boolean> {
 
 // CATEGORIES
 export async function getCategories(): Promise<Category[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('categories').select('*');
+    if (!error && data && data.length > 0) {
+      setStorageData('yaps_categories', data);
+      return data;
+    }
+  } catch (err) {
+    console.log('Usando almacenamiento de categorías:', err);
+  }
   return getStorageData<Category[]>('yaps_categories', INITIAL_CATEGORIES);
 }
 
 export async function createCategory(data: Omit<Category, 'id'>): Promise<Category> {
-  const list = await getCategories();
   const newCat: Category = {
     ...data,
     id: `c-${Date.now()}`,
   };
+
+  try {
+    const supabase = createClient();
+    const { data: res, error } = await supabase.from('categories').insert([data]).select().single();
+    if (!error && res) {
+      newCat.id = String(res.id);
+    }
+  } catch (err) {
+    console.log('Guardando categoría localmente:', err);
+  }
+
+  const list = await getCategories();
   const updated = [...list, newCat];
   setStorageData('yaps_categories', updated);
   return newCat;
 }
 
 export async function updateCategory(id: string, data: Partial<Category>): Promise<Category> {
+  try {
+    const supabase = createClient();
+    await supabase.from('categories').update(data).eq('id', id);
+  } catch (err) {
+    console.log('Actualizando categoría localmente:', err);
+  }
+
   const list = await getCategories();
   let updatedItem: Category | null = null;
   const updated = list.map((c) => {
@@ -226,6 +365,13 @@ export async function updateCategory(id: string, data: Partial<Category>): Promi
 }
 
 export async function deleteCategory(id: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    await supabase.from('categories').delete().eq('id', id);
+  } catch (err) {
+    console.log('Eliminando categoría localmente:', err);
+  }
+
   const list = await getCategories();
   const filtered = list.filter((c) => c.id !== id);
   setStorageData('yaps_categories', filtered);
@@ -234,22 +380,50 @@ export async function deleteCategory(id: string): Promise<boolean> {
 
 // USERS & ROLES
 export async function getUsers(): Promise<UserAccount[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (!error && data && data.length > 0) {
+      setStorageData('yaps_users', data);
+      return data;
+    }
+  } catch (err) {
+    console.log('Usando almacenamiento de usuarios:', err);
+  }
   return getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
 }
 
 export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): Promise<UserAccount> {
-  const list = await getUsers();
   const newUser: UserAccount = {
     ...data,
     id: `u-${Date.now()}`,
     created_at: new Date().toISOString(),
   };
+
+  try {
+    const supabase = createClient();
+    const { data: res, error } = await supabase.from('profiles').insert([data]).select().single();
+    if (!error && res) {
+      newUser.id = String(res.id);
+    }
+  } catch (err) {
+    console.log('Almacenando usuario localmente:', err);
+  }
+
+  const list = await getUsers();
   const updated = [newUser, ...list];
   setStorageData('yaps_users', updated);
   return newUser;
 }
 
 export async function updateUser(id: string, data: Partial<UserAccount>): Promise<UserAccount> {
+  try {
+    const supabase = createClient();
+    await supabase.from('profiles').update(data).eq('id', id);
+  } catch (err) {
+    console.log('Actualizando usuario localmente:', err);
+  }
+
   const list = await getUsers();
   let updatedItem: UserAccount | null = null;
   const updated = list.map((u) => {
@@ -268,6 +442,13 @@ export async function updateUserRole(id: string, role: UserRole): Promise<UserAc
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    await supabase.from('profiles').delete().eq('id', id);
+  } catch (err) {
+    console.log('Eliminando usuario localmente:', err);
+  }
+
   const list = await getUsers();
   const filtered = list.filter((u) => u.id !== id);
   setStorageData('yaps_users', filtered);
