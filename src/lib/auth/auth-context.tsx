@@ -55,18 +55,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password?: string, selectedRole?: UserRole): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const usersList = await getUsers();
       const cleanEmail = email.trim().toLowerCase();
-      
-      // Find matching user
-      let matchedUser = usersList.find((u) => u.email.toLowerCase() === cleanEmail);
+      const cleanPassword = (password || '').trim();
 
-      // If user not found in pre-populated store, check if it's admin login credentials
+      const usersList = await getUsers();
+      
+      // Find matching user by email
+      let matchedUser = usersList.find((u) => u.email.trim().toLowerCase() === cleanEmail);
+
+      // If user not found in store, check root admin fallback
       if (!matchedUser && cleanEmail === 'admin@yaps.bo') {
         matchedUser = {
           id: 'u-admin-root',
           name: 'Administrador Principal',
           email: 'admin@yaps.bo',
+          password: '123456',
           role: 'admin',
           status: 'active',
           created_at: new Date().toISOString(),
@@ -74,13 +77,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!matchedUser) {
-        toast.error('Usuario no registrado. Revisa el correo ingresado.');
+        toast.error('Correo no registrado. Revisa el email e inténtalo de nuevo.');
         setIsLoading(false);
         return false;
       }
 
       if (matchedUser.status === 'inactive') {
         toast.error('Esta cuenta se encuentra inactiva o dada de baja.');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Password verification logic
+      if (matchedUser.password && cleanPassword && matchedUser.password !== cleanPassword) {
+        toast.error('Contraseña incorrecta. Revisa e ingresa nuevamente tu clave.');
         setIsLoading(false);
         return false;
       }

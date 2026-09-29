@@ -378,41 +378,79 @@ export async function deleteCategory(id: string): Promise<boolean> {
   return true;
 }
 
-// USERS & ROLES
+// USERS & ROLES Persistence
 export async function getUsers(): Promise<UserAccount[]> {
+  const localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
   try {
     const supabase = createClient();
     const { data, error } = await supabase.from('profiles').select('*');
     if (!error && data && data.length > 0) {
-      setStorageData('yaps_users', data);
-      return data;
+      const mergedMap = new Map<string, UserAccount>();
+      localList.forEach((u) => mergedMap.set(u.email.toLowerCase(), u));
+
+      data.forEach((item: any) => {
+        const emailKey = (item.email || '').toLowerCase();
+        if (emailKey) {
+          const existing = mergedMap.get(emailKey);
+          mergedMap.set(emailKey, {
+            id: String(item.id || existing?.id || `u-${Date.now()}`),
+            name: item.name || item.full_name || existing?.name || 'Usuario',
+            email: item.email || existing?.email || '',
+            password: item.password || existing?.password || '123456',
+            avatar_url: item.avatar_url || existing?.avatar_url,
+            role: item.role || existing?.role || 'user',
+            business_id: item.business_id || existing?.business_id,
+            business_name: item.business_name || existing?.business_name,
+            status: item.status || existing?.status || 'active',
+            created_at: item.created_at || existing?.created_at || new Date().toISOString(),
+          });
+        }
+      });
+      const combined = Array.from(mergedMap.values());
+      setStorageData('yaps_users', combined);
+      return combined;
     }
   } catch (err) {
-    console.log('Usando almacenamiento de usuarios:', err);
+    console.log('Usando almacenamiento sincronizado de usuarios:', err);
   }
-  return getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
+  return localList;
 }
 
 export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): Promise<UserAccount> {
+  const localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
   const newUser: UserAccount = {
     ...data,
     id: `u-${Date.now()}`,
+    password: data.password || '123456',
+    status: data.status || 'active',
     created_at: new Date().toISOString(),
   };
 
+  // 1. Instantly update LocalStorage so login works immediately!
+  const filteredList = localList.filter((u) => u.email.toLowerCase() !== newUser.email.toLowerCase());
+  const updatedList = [newUser, ...filteredList];
+  setStorageData('yaps_users', updatedList);
+
+  // 2. Insert to Supabase DB profiles table
   try {
     const supabase = createClient();
-    const { data: res, error } = await supabase.from('profiles').insert([data]).select().single();
+    const { data: res, error } = await supabase.from('profiles').insert([{
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      password: data.password || '123456',
+      status: data.status || 'active',
+      business_id: data.business_id,
+      business_name: data.business_name
+    }]).select().single();
+
     if (!error && res) {
       newUser.id = String(res.id);
     }
   } catch (err) {
-    console.log('Almacenando usuario localmente:', err);
+    console.log('Almacenando usuario en caché local:', err);
   }
 
-  const list = await getUsers();
-  const updated = [newUser, ...list];
-  setStorageData('yaps_users', updated);
   return newUser;
 }
 
