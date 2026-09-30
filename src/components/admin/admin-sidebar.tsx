@@ -68,21 +68,27 @@ export function AdminSidebar({ isOpenMobile = false, onCloseMobile }: AdminSideb
       {/* Brand Header */}
       <div className="flex h-16 items-center justify-between px-6 border-b border-border/40">
         <Link href="/admin" onClick={handleNavClick} className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-purple-600 shadow-md shadow-primary/20">
-            <span className="text-xl font-black text-white">Y</span>
+          <div className="relative h-10 w-10 overflow-hidden rounded-xl bg-gradient-to-tr from-red-600 via-red-500 to-amber-500 p-0.5 shadow-md shadow-red-500/20 shrink-0">
+            <div className="h-full w-full rounded-[10px] bg-white flex items-center justify-center p-0.5">
+              <img
+                src="/img/Logo.webp"
+                alt="Yaps Logo"
+                className="h-full w-full object-contain"
+              />
+            </div>
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-foreground flex items-center gap-1.5">
-              Yaps <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+            <span className="text-lg font-black tracking-tight text-foreground flex items-center gap-1.5">
+              Yaps <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
                 role === 'admin'
-                  ? 'bg-primary/10 text-primary border-primary/20'
+                  ? 'bg-red-500/10 text-red-600 border-red-500/20'
                   : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
               }`}>
                 {role === 'admin' ? 'Admin' : 'Usuario'}
               </span>
             </span>
-            <span className="text-[10px] text-muted-foreground font-medium">
-              {role === 'admin' ? 'Gestión Global' : 'Portal Negocio'}
+            <span className="text-[10px] text-muted-foreground font-semibold">
+              {role === 'admin' ? 'Gestión Bolivia' : 'Portal Negocio'}
             </span>
           </div>
         </Link>

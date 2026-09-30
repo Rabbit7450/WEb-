@@ -53,11 +53,17 @@ export function UnifiedLoginPage() {
       <div className="relative z-10 w-full max-w-md p-6 sm:p-10 rounded-3xl bg-slate-900/90 border border-slate-800/80 shadow-2xl backdrop-blur-2xl">
         {/* Logo Header */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary via-purple-600 to-pink-500 shadow-xl shadow-primary/30 mb-3 ring-4 ring-primary/20">
-            <span className="text-2xl sm:text-3xl font-black text-white">Y</span>
+          <div className="relative h-14 w-14 sm:h-16 sm:w-16 overflow-hidden rounded-2xl bg-gradient-to-tr from-red-600 via-red-500 to-amber-400 p-0.5 shadow-xl shadow-red-500/30 mb-3 ring-4 ring-red-500/20">
+            <div className="h-full w-full rounded-[14px] bg-white flex items-center justify-center p-1">
+              <img
+                src="/img/Logo.webp"
+                alt="Yaps Logo"
+                className="h-full w-full object-contain"
+              />
+            </div>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            Panel Único de Acceso <Sparkles className="h-5 w-5 text-primary" />
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            Panel Único de Acceso <Sparkles className="h-5 w-5 text-amber-400" />
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-xs">
             Ingresa tus credenciales autorizadas para acceder al sistema

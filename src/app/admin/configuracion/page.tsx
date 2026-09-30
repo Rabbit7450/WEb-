@@ -52,6 +52,7 @@ export default function AdminSettingsPage() {
   const [siteDesc, setSiteDesc] = useState('Todas las mejores ofertas y promociones de Bolivia en un solo lugar');
   const [contactEmail, setContactEmail] = useState('contacto@yaps.bo');
   const [contactPhone, setContactPhone] = useState('+591 76543210');
+  const [logoUrl, setLogoUrl] = useState('/img/Logo.webp');
 
   const [savingAds, setSavingAds] = useState(false);
   const [savingSite, setSavingSite] = useState(false);
@@ -328,7 +329,35 @@ export default function AdminSettingsPage() {
               </CardDescription>
             </CardHeader>
 
-            <form onSubmit={handleSaveSite} className="p-6 space-y-4">
+            <form onSubmit={handleSaveSite} className="p-6 space-y-5">
+              {/* Brand Logo Setting & Preview */}
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border/50 space-y-3">
+                <Label htmlFor="brand-logo" className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-red-600" /> Logo de la Marca / Plataforma Yaps
+                </Label>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="h-16 w-16 rounded-2xl bg-white border-2 border-red-500/30 p-1.5 flex items-center justify-center shadow-md shrink-0">
+                    <img
+                      src={logoUrl || '/img/Logo.webp'}
+                      alt="Vista previa del Logo"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1 w-full">
+                    <Input
+                      id="brand-logo"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="/img/Logo.webp"
+                      className="h-10 rounded-xl text-xs font-mono"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Ruta relativa o URL directa de la imagen del logo (Por defecto: <code className="text-red-600 font-bold">/img/Logo.webp</code> de la carpeta <code className="font-bold">src/img</code>).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="site-title" className="text-xs font-semibold">Título Principal de la Web</Label>
                 <Input
