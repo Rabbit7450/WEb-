@@ -120,8 +120,7 @@ const INITIAL_CATEGORIES: Category[] = [
 
 const INITIAL_USERS: UserAccount[] = [
   { id: 'u1', name: 'Administrador Principal', email: 'admin@yaps.bo', password: '123456', role: 'admin', status: 'active', created_at: new Date().toISOString() },
-  { id: 'u2', name: 'Gerente Makro Abasto', email: 'contacto@makroabasto.bo', password: '123456', role: 'user', business_id: 'b-makro', business_name: 'Makro Abasto - Gran Vía', status: 'active', created_at: new Date().toISOString() },
-  { id: 'u3', name: 'Ventas Pollos Cochabamba', email: 'ventas@polloscocha.bo', password: '123456', role: 'user', business_id: 'b-polloscocha', business_name: 'Pollos Cochabamba', status: 'active', created_at: new Date().toISOString() },
+  { id: 'u2', name: 'Adalit TIC Admin', email: 'adalit.tic@gmail.com', password: 'Jhack0', role: 'admin', status: 'active', created_at: new Date().toISOString() },
 ];
 
 const INITIAL_ADS_CONFIG: GoogleAdsConfig = {
@@ -205,22 +204,25 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
 
   try {
     const supabase = createClient();
+    const dbPayload: any = {
+      title: promo.title,
+      description: promo.description,
+      discount_percent: promo.discount_percentage,
+      original_price: promo.original_price,
+      promo_price: promo.offer_price,
+      image_url: promo.image_url,
+      status: promo.status || 'published',
+    };
+    if (promo.business_id && promo.business_id.length > 10) {
+      dbPayload.business_id = promo.business_id;
+    }
+    if (promo.category_id && promo.category_id.length > 10) {
+      dbPayload.category_id = promo.category_id;
+    }
+
     const { data, error } = await supabase
       .from('promotions')
-      .insert([{
-        title: promo.title,
-        description: promo.description,
-        discount_percentage: promo.discount_percentage,
-        original_price: promo.original_price,
-        offer_price: promo.offer_price,
-        image_url: promo.image_url,
-        status: promo.status,
-        business_id: promo.business_id,
-        category_id: promo.category_id,
-        start_date: promo.start_date,
-        end_date: promo.end_date,
-        coupon_code: promo.coupon_code
-      }])
+      .insert([dbPayload])
       .select()
       .single();
 
@@ -228,7 +230,7 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
       newPromo.id = String(data.id);
     }
   } catch (err) {
-    console.log('Almacenando promoción en base de datos local:', err);
+    console.log('Almacenando promoción en base de datos:', err);
   }
 
   const list = await getPromotions();
@@ -240,9 +242,18 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
 export async function updatePromotion(id: string, promo: Partial<Promotion>): Promise<Promotion> {
   try {
     const supabase = createClient();
-    await supabase.from('promotions').update(promo).eq('id', id);
+    const dbPayload: any = {};
+    if (promo.title !== undefined) dbPayload.title = promo.title;
+    if (promo.description !== undefined) dbPayload.description = promo.description;
+    if (promo.discount_percentage !== undefined) dbPayload.discount_percent = promo.discount_percentage;
+    if (promo.original_price !== undefined) dbPayload.original_price = promo.original_price;
+    if (promo.offer_price !== undefined) dbPayload.promo_price = promo.offer_price;
+    if (promo.image_url !== undefined) dbPayload.image_url = promo.image_url;
+    if (promo.status !== undefined) dbPayload.status = promo.status;
+
+    await supabase.from('promotions').update(dbPayload).eq('id', id);
   } catch (err) {
-    console.log('Actualizando promoción en base de datos local:', err);
+    console.log('Actualizando promoción:', err);
   }
 
   const list = await getPromotions();
@@ -263,7 +274,7 @@ export async function deletePromotion(id: string): Promise<boolean> {
     const supabase = createClient();
     await supabase.from('promotions').delete().eq('id', id);
   } catch (err) {
-    console.log('Eliminando promoción de base de datos local:', err);
+    console.log('Eliminando promoción:', err);
   }
 
   const list = await getPromotions();
@@ -419,7 +430,23 @@ export async function deleteCategory(id: string): Promise<boolean> {
 
 // USERS & ROLES Persistence
 export async function getUsers(): Promise<UserAccount[]> {
-  const localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
+  let localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
+  
+  // Ensure the 2 official accounts are always present
+  INITIAL_USERS.forEach((initUser) => {
+    const exists = localList.some((u) => u.email.toLowerCase() === initUser.email.toLowerCase());
+    if (!exists) {
+      localList.push(initUser);
+    } else {
+      // Update passwords to ensure exact match
+      localList = localList.map((u) => 
+        u.email.toLowerCase() === initUser.email.toLowerCase() 
+          ? { ...u, password: initUser.password, role: initUser.role, status: 'active' } 
+          : u
+      );
+    }
+  });
+
   try {
     const supabase = createClient();
     const { data, error } = await supabase.from('profiles').select('*');
@@ -437,7 +464,7 @@ export async function getUsers(): Promise<UserAccount[]> {
             email: item.email || existing?.email || '',
             password: item.password || existing?.password || '123456',
             avatar_url: item.avatar_url || existing?.avatar_url,
-            role: item.role || existing?.role || 'user',
+            role: item.role || existing?.role || 'admin',
             business_id: item.business_id || existing?.business_id,
             business_name: item.business_name || existing?.business_name,
             status: item.status || existing?.status || 'active',
@@ -452,6 +479,7 @@ export async function getUsers(): Promise<UserAccount[]> {
   } catch (err) {
     console.log('Usando almacenamiento sincronizado de usuarios:', err);
   }
+  setStorageData('yaps_users', localList);
   return localList;
 }
 
@@ -465,46 +493,49 @@ export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): 
     created_at: new Date().toISOString(),
   };
 
-  // 1. Instantly update LocalStorage so login works immediately!
+  try {
+    const supabase = createClient();
+    const { data: authRes, error: authErr } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password || '123456',
+      options: {
+        data: {
+          full_name: data.name,
+          role: data.role,
+        }
+      }
+    });
+
+    if (!authErr && authRes?.user) {
+      newUser.id = authRes.user.id;
+      await supabase.from('profiles').upsert([{
+        id: authRes.user.id,
+        full_name: data.name,
+        role: data.role,
+      }]);
+    }
+  } catch (err) {
+    console.log('Registrando usuario en almacenamiento sincronizado:', err);
+  }
+
   const filteredList = localList.filter((u) => u.email.toLowerCase() !== newUser.email.toLowerCase());
   const updatedList = [newUser, ...filteredList];
   setStorageData('yaps_users', updatedList);
-
-  // 2. Safely attempt insert to Supabase DB profiles table
-  try {
-    const supabase = createClient();
-    const payload: any = {
-      email: data.email,
-      role: data.role,
-    };
-    if (data.name) payload.name = data.name;
-    if (data.status) payload.status = data.status;
-
-    const { data: res, error } = await supabase.from('profiles').insert([payload]).select().single();
-    if (!error && res) {
-      newUser.id = String(res.id);
-    }
-  } catch {
-    // Graceful fallback to local cache
-  }
-
   return newUser;
 }
 
 export async function updateUser(id: string, data: Partial<UserAccount>): Promise<UserAccount> {
   try {
     const supabase = createClient();
-    const updatePayload: any = {};
-    if (data.name) updatePayload.name = data.name;
-    if (data.email) updatePayload.email = data.email;
-    if (data.role) updatePayload.role = data.role;
-    if (data.status) updatePayload.status = data.status;
+    const payload: any = {};
+    if (data.name) payload.full_name = data.name;
+    if (data.role) payload.role = data.role;
 
-    if (Object.keys(updatePayload).length > 0) {
-      await supabase.from('profiles').update(updatePayload).eq('id', id);
+    if (Object.keys(payload).length > 0 && id.length > 10) {
+      await supabase.from('profiles').update(payload).eq('id', id);
     }
-  } catch {
-    // Graceful fallback
+  } catch (err) {
+    console.log('Actualizando perfil en Supabase:', err);
   }
 
   const list = await getUsers();
@@ -520,22 +551,24 @@ export async function updateUser(id: string, data: Partial<UserAccount>): Promis
   return updatedItem || (data as UserAccount);
 }
 
-export async function updateUserRole(id: string, role: UserRole): Promise<UserAccount> {
-  return updateUser(id, { role });
-}
-
 export async function deleteUser(id: string): Promise<boolean> {
   try {
     const supabase = createClient();
-    await supabase.from('profiles').delete().eq('id', id);
+    if (id.length > 10) {
+      await supabase.from('profiles').delete().eq('id', id);
+    }
   } catch (err) {
-    console.log('Eliminando usuario localmente:', err);
+    console.log('Eliminando perfil en Supabase:', err);
   }
 
   const list = await getUsers();
   const filtered = list.filter((u) => u.id !== id);
   setStorageData('yaps_users', filtered);
   return true;
+}
+
+export async function updateUserRole(id: string, role: UserRole): Promise<UserAccount> {
+  return updateUser(id, { role });
 }
 
 // GOOGLE ADS MONETIZATION

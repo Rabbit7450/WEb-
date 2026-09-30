@@ -55,45 +55,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const cleanPassword = (password || '123456').trim();
+      const cleanPassword = (password || '').trim();
 
       const usersList = await getUsers();
       
       // Find matching user by email
-      let matchedUser = usersList.find((u) => u.email.trim().toLowerCase() === cleanEmail);
+      const matchedUser = usersList.find((u) => u.email.trim().toLowerCase() === cleanEmail);
 
-      // If user not found in pre-populated list, create/register account on the fly!
       if (!matchedUser) {
-        const defaultName = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ');
-        const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
-        
-        const newAccountData: Omit<UserAccount, 'id' | 'created_at'> = {
-          name: formattedName || (selectedRole === 'admin' ? 'Administrador Yaps' : 'Usuario Comercial'),
-          email: cleanEmail,
-          password: cleanPassword,
-          role: selectedRole,
-          status: 'active',
-        };
-
-        matchedUser = await createUser(newAccountData);
-        toast.info(`Cuenta creada e ingresada como ${selectedRole === 'admin' ? 'Administrador' : 'Usuario Comercial'}`);
-      } else {
-        // Validate account status
-        if (matchedUser.status === 'inactive') {
-          toast.error('Esta cuenta se encuentra inactiva o dada de baja.');
-          setIsLoading(false);
-          return false;
-        }
-
-        // Validate password if present
-        if (matchedUser.password && cleanPassword && matchedUser.password !== cleanPassword) {
-          toast.error('Contraseña incorrecta. Revisa e ingresa nuevamente tu clave.');
-          setIsLoading(false);
-          return false;
-        }
-
-        toast.success(`¡Bienvenido, ${matchedUser.name}! (${matchedUser.role === 'admin' ? 'Administrador' : 'Usuario Comercial'})`);
+        toast.error('Correo no registrado. La creación de nuevos administradores solo se permite desde el panel de control.');
+        setIsLoading(false);
+        return false;
       }
+
+      // Validate account status
+      if (matchedUser.status === 'inactive') {
+        toast.error('Esta cuenta se encuentra inactiva o dada de baja por el Administrador.');
+        setIsLoading(false);
+        return false;
+      }
+
+      // Validate password
+      if (matchedUser.password && cleanPassword !== matchedUser.password) {
+        toast.error('Contraseña incorrecta. Revisa e ingresa nuevamente tu clave.');
+        setIsLoading(false);
+        return false;
+      }
+
+      toast.success(`¡Bienvenido, ${matchedUser.name}! (${matchedUser.role === 'admin' ? 'Administrador' : 'Usuario Comercial'})`);
 
       setUser(matchedUser);
       setRole(matchedUser.role);
@@ -104,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       return true;
     } catch {
-      toast.error('Error al iniciar sesión');
+      toast.error('Error al verificar las credenciales');
       setIsLoading(false);
       return false;
     }
