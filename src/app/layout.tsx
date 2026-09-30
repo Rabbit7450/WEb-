@@ -28,6 +28,8 @@ export default function RootLayout({
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6370743227565174"
           crossOrigin="anonymous"
         />
+        <script src="https://pl31581293.profitableratecpmnetwork.com/1d/7e/af/1d7eaf3ec29e815accb23da478075bdf.js" />
+        <script src="https://pl31581339.profitableratecpmnetwork.com/58/d1/ca/58d1ca17f079da07a800d562e971d5ed.js" />
       </head>
       <body className={`${inter.className} min-h-screen bg-background text-foreground antialiased`}>
         <AuthProvider>

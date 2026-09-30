@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GoogleAd } from "@/components/ads/google-ad";
+import { CpmLinkBanner } from "@/components/ads/cpm-link-banner";
 import { PublishPromoModal } from "@/components/promotions/publish-promo-modal";
 import {
   Search,
@@ -28,8 +29,9 @@ export default function HomePage() {
 
       <main>
         {/* Top Ad Banners */}
-        <div className="container-app pt-6">
+        <div className="container-app pt-6 space-y-4">
           <GoogleAd slotType="hero" />
+          <CpmLinkBanner />
         </div>
 
         {/* Hero Section in Rojo, Amarillo y Blanco */}
