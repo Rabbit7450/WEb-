@@ -128,24 +128,40 @@ export function PromotionModal({
     }
   }, [promotion, isOpen, localBusinesses, categories]);
 
-  // Recalcular el precio en oferta automáticamente si cambia descuento u original
-  const handleDiscountChange = (percentage: number) => {
-    const orig = formData.original_price || 0;
-    const offer = orig - (orig * (percentage / 100));
+  // Recalcular el precio en oferta automáticamente si cambia descuento u original (admite decimales)
+  const handleDiscountChange = (val: string | number) => {
+    const disc = typeof val === 'number' ? val : parseFloat(val);
+    const orig = typeof formData.original_price === 'number'
+      ? formData.original_price
+      : parseFloat(String(formData.original_price || 0));
+
+    let offer = formData.offer_price;
+    if (!isNaN(disc) && !isNaN(orig) && orig > 0) {
+      offer = Math.round((orig - (orig * (disc / 100))) * 100) / 100;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      discount_percentage: percentage,
-      offer_price: Math.round(offer * 100) / 100,
+      discount_percentage: val as any,
+      offer_price: offer,
     }));
   };
 
-  const handleOriginalPriceChange = (orig: number) => {
-    const disc = formData.discount_percentage || 0;
-    const offer = orig - (orig * (disc / 100));
+  const handleOriginalPriceChange = (val: string | number) => {
+    const orig = typeof val === 'number' ? val : parseFloat(val);
+    const disc = typeof formData.discount_percentage === 'number'
+      ? formData.discount_percentage
+      : parseFloat(String(formData.discount_percentage || 0));
+
+    let offer = formData.offer_price;
+    if (!isNaN(orig) && !isNaN(disc)) {
+      offer = Math.round((orig - (orig * (disc / 100))) * 100) / 100;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      original_price: orig,
-      offer_price: Math.round(offer * 100) / 100,
+      original_price: val as any,
+      offer_price: offer,
     }));
   };
 
@@ -271,8 +287,15 @@ export function PromotionModal({
     const selectedBiz = localBusinesses.find((b) => b.id === formData.business_id);
     const selectedCat = categories.find((c) => c.id === formData.category_id);
 
+    const origNum = parseFloat(String(formData.original_price ?? 0)) || 0;
+    const offerNum = parseFloat(String(formData.offer_price ?? 0)) || 0;
+    const discNum = parseFloat(String(formData.discount_percentage ?? 0)) || 0;
+
     const payload: Partial<Promotion> = {
       ...formData,
+      original_price: origNum,
+      offer_price: offerNum,
+      discount_percentage: discNum,
       business_id: formData.business_id || selectedBiz?.id || '',
       business_name: selectedBiz?.name || formData.business_name || 'Negocio',
       category_id: formData.category_id || selectedCat?.id || '',
@@ -515,10 +538,11 @@ export function PromotionModal({
                 <Input
                   id="discount"
                   type="number"
+                  step="any"
                   min="0"
                   max="100"
-                  value={formData.discount_percentage || 0}
-                  onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                  value={formData.discount_percentage ?? ''}
+                  onChange={(e) => handleDiscountChange(e.target.value)}
                   className="rounded-lg h-9 text-xs pl-7 font-bold text-red-600 bg-white"
                 />
                 <Percent className="absolute left-2 top-2.5 h-3.5 w-3.5 text-red-600" />
@@ -532,9 +556,10 @@ export function PromotionModal({
               <Input
                 id="orig_price"
                 type="number"
+                step="any"
                 min="0"
-                value={formData.original_price || 0}
-                onChange={(e) => handleOriginalPriceChange(Number(e.target.value))}
+                value={formData.original_price ?? ''}
+                onChange={(e) => handleOriginalPriceChange(e.target.value)}
                 className="rounded-lg h-9 text-xs font-semibold bg-white"
               />
             </div>
@@ -546,9 +571,10 @@ export function PromotionModal({
               <Input
                 id="offer_price"
                 type="number"
+                step="any"
                 min="0"
-                value={formData.offer_price || 0}
-                onChange={(e) => setFormData({ ...formData, offer_price: Number(e.target.value) })}
+                value={formData.offer_price ?? ''}
+                onChange={(e) => setFormData({ ...formData, offer_price: e.target.value as any })}
                 className="rounded-lg h-9 text-xs font-black text-emerald-700 bg-emerald-50 border-emerald-300"
               />
             </div>

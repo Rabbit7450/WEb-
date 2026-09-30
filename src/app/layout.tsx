@@ -9,6 +9,13 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Yaps — Promociones de Bolivia",
   description: "Todas las mejores promociones de Bolivia en un solo lugar",
+  icons: {
+    icon: [
+      { url: "/img/Logo.webp", type: "image/webp" },
+    ],
+    shortcut: "/img/Logo.webp",
+    apple: "/img/Logo.webp",
+  },
   other: {
     "google-adsense-account": "ca-pub-6370743227565174",
   },
@@ -22,6 +29,8 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/img/Logo.webp" type="image/webp" sizes="any" />
+        <link rel="apple-touch-icon" href="/img/Logo.webp" />
         <meta name="google-adsense-account" content="ca-pub-6370743227565174" />
         <script
           async
