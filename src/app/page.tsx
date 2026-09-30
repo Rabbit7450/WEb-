@@ -1,8 +1,14 @@
+'use client';
+
+import { useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GoogleAd } from "@/components/ads/google-ad";
+import { CpmAdBanner } from "@/components/ads/cpm-ad";
+import { HighRevenueAdBanner } from "@/components/ads/high-revenue-ad";
+import { PublishPromoModal } from "@/components/promotions/publish-promo-modal";
 import {
   Search,
   MapPin,
@@ -16,18 +22,22 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-12 font-sans">
+    <div className="min-h-screen bg-amber-50/70 text-slate-900 pb-12 font-sans">
       <Header />
 
       <main>
-        {/* Top Google Ad Hero Banner */}
-        <div className="container-app pt-6">
+        {/* Top Ad Banners */}
+        <div className="container-app pt-6 space-y-4">
           <GoogleAd slotType="hero" />
+          <CpmAdBanner />
+          <HighRevenueAdBanner />
         </div>
 
         {/* Hero Section in Rojo, Amarillo y Blanco */}
-        <section className="relative overflow-hidden border-b border-red-500/20 bg-gradient-to-b from-white via-red-500/5 to-amber-500/10 mt-4 py-16 md:py-24">
+        <section className="relative overflow-hidden border-b border-red-500/20 bg-gradient-to-b from-amber-100/60 via-red-500/10 to-amber-500/20 mt-4 py-16 md:py-24">
           <div className="container-app">
             <div className="mx-auto max-w-3xl text-center">
               {/* Floating Badge in Yellow & Red */}
@@ -372,14 +382,14 @@ export default function HomePage() {
                   Publica tus promociones en Bolivianos (Bs.) gratis y llega a miles de compradores activos en La Paz, Santa Cruz, Cochabamba y todo el país.
                 </p>
                 <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-                  <Link href="/login">
-                    <Button
-                      size="lg"
-                      className="rounded-xl bg-amber-400 text-slate-950 hover:bg-amber-300 font-black text-sm px-8 shadow-xl shadow-amber-400/30"
-                    >
-                      Publicar mi Promoción
-                    </Button>
-                  </Link>
+                  <Button
+                    size="lg"
+                    onClick={() => setIsPublishModalOpen(true)}
+                    className="rounded-xl bg-amber-400 text-slate-950 hover:bg-amber-300 font-black text-sm px-8 shadow-xl shadow-amber-400/30 flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="h-4 w-4 text-red-600 fill-red-600" />
+                    <span>Publicar mi Promoción</span>
+                  </Button>
                   <Link href="/login">
                     <Button
                       size="lg"
@@ -397,7 +407,7 @@ export default function HomePage() {
       </main>
 
       {/* Footer in Red & Yellow */}
-      <footer className="border-t border-slate-200 bg-white py-12">
+      <footer className="border-t border-amber-200/60 bg-amber-100/40 py-12">
         <div className="container-app">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-2.5">
@@ -424,6 +434,12 @@ export default function HomePage() {
 
       {/* Footer Sticky Google Ad */}
       <GoogleAd slotType="footer" />
+
+      {/* Publish Promotion Form Modal */}
+      <PublishPromoModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+      />
     </div>
   );
 }
