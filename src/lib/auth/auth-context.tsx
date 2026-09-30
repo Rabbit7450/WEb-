@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole, UserAccount } from '@/types/admin';
-import { getUsers } from '@/lib/services/promotions';
+import { getUsers, createUser } from '@/lib/services/promotions';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -42,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           toast.error('Tu cuenta ha sido dada de baja por el administrador.');
           logout();
         } else {
-          // Fallback if not found
           logout();
         }
       } else {
@@ -52,47 +51,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   };
 
-  const login = async (email: string, password?: string, selectedRole?: UserRole): Promise<boolean> => {
+  const login = async (email: string, password?: string, selectedRole: UserRole = 'admin'): Promise<boolean> => {
     setIsLoading(true);
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const cleanPassword = (password || '').trim();
+      const cleanPassword = (password || '123456').trim();
 
       const usersList = await getUsers();
       
       // Find matching user by email
       let matchedUser = usersList.find((u) => u.email.trim().toLowerCase() === cleanEmail);
 
-      // If user not found in store, check root admin fallback
-      if (!matchedUser && cleanEmail === 'admin@yaps.bo') {
-        matchedUser = {
-          id: 'u-admin-root',
-          name: 'Administrador Principal',
-          email: 'admin@yaps.bo',
-          password: '123456',
-          role: 'admin',
-          status: 'active',
-          created_at: new Date().toISOString(),
-        };
-      }
-
+      // If user not found in pre-populated list, create/register account on the fly!
       if (!matchedUser) {
-        toast.error('Correo no registrado. Revisa el email e inténtalo de nuevo.');
-        setIsLoading(false);
-        return false;
-      }
+        const defaultName = cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ');
+        const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
+        
+        const newAccountData: Omit<UserAccount, 'id' | 'created_at'> = {
+          name: formattedName || (selectedRole === 'admin' ? 'Administrador Yaps' : 'Usuario Comercial'),
+          email: cleanEmail,
+          password: cleanPassword,
+          role: selectedRole,
+          status: 'active',
+        };
 
-      if (matchedUser.status === 'inactive') {
-        toast.error('Esta cuenta se encuentra inactiva o dada de baja.');
-        setIsLoading(false);
-        return false;
-      }
+        matchedUser = await createUser(newAccountData);
+        toast.info(`Cuenta creada e ingresada como ${selectedRole === 'admin' ? 'Administrador' : 'Usuario Comercial'}`);
+      } else {
+        // Validate account status
+        if (matchedUser.status === 'inactive') {
+          toast.error('Esta cuenta se encuentra inactiva o dada de baja.');
+          setIsLoading(false);
+          return false;
+        }
 
-      // Password verification logic
-      if (matchedUser.password && cleanPassword && matchedUser.password !== cleanPassword) {
-        toast.error('Contraseña incorrecta. Revisa e ingresa nuevamente tu clave.');
-        setIsLoading(false);
-        return false;
+        // Validate password if present
+        if (matchedUser.password && cleanPassword && matchedUser.password !== cleanPassword) {
+          toast.error('Contraseña incorrecta. Revisa e ingresa nuevamente tu clave.');
+          setIsLoading(false);
+          return false;
+        }
+
+        toast.success(`¡Bienvenido, ${matchedUser.name}! (${matchedUser.role === 'admin' ? 'Administrador' : 'Usuario Comercial'})`);
       }
 
       setUser(matchedUser);
@@ -101,7 +101,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('yaps_user_id', matchedUser.id);
       localStorage.setItem('yaps_user_role', matchedUser.role);
 
-      toast.success(`¡Bienvenido, ${matchedUser.name}! (${matchedUser.role === 'admin' ? 'Administrador' : 'Usuario Comercial'})`);
       setIsLoading(false);
       return true;
     } catch {
