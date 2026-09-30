@@ -46,10 +46,10 @@ export default function PromocionesPage() {
               <Flame className="h-4 w-4 text-red-600 fill-red-600" /> Catálogo Oficial de Bolivia
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">
-              Todas las Promociones en Bolivianos (Bs.)
+              Todas las Promociones
             </h1>
             <p className="mt-1 text-sm text-slate-600 font-medium">
-              Explora las ofertas verificadas de supermercados, cines y restaurantes en todo el país.
+              Explora las ofertas verificadas de supermercados, cines y restaurantes.
             </p>
           </div>
 
@@ -58,7 +58,7 @@ export default function PromocionesPage() {
             <Search className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-red-500" />
             <input
               type="text"
-              placeholder="Buscar en el catálogo (Bs)..."
+              placeholder="Buscar en el catálogo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-xl bg-white border border-amber-300 py-2.5 pr-4 pl-10 text-xs font-semibold text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-red-500"

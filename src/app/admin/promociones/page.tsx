@@ -262,6 +262,9 @@ export default function AdminPromotionsPage() {
         promotion={selectedPromo}
         businesses={businesses}
         categories={categories}
+        onBusinessCreated={(newBiz) => {
+          setBusinesses((prev) => [newBiz, ...prev.filter((b) => b.id !== newBiz.id)]);
+        }}
       />
     </div>
   );

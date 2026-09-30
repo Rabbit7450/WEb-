@@ -74,7 +74,7 @@ export default function HomePage() {
               {/* Floating Badge in Yellow & Red */}
               <div className="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md shadow-amber-500/20 animate-bounce">
                 <Flame className="h-4 w-4 text-red-600 fill-red-600" />
-                <span>Las Mejores Ofertas de Bolivia en Bolivianos (Bs.)</span>
+                <span>Las Mejores Ofertas de Bolivia</span>
               </div>
 
               <h1 className="text-balance text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-900">
@@ -85,7 +85,7 @@ export default function HomePage() {
               </h1>
 
               <p className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-slate-600 font-medium">
-                Descubre descuentos reales en <strong className="text-slate-900">Bolivianos (Bs.)</strong> de supermercados, cines, restaurantes y tiendas en La Paz, El Alto, Cochabamba y todo el país.
+                Descubre descuentos reales de supermercados, cines, restaurantes y tiendas en La Paz, El Alto y Cochabamba.
               </p>
 
               {/* Search Box in White & Red */}
@@ -94,7 +94,7 @@ export default function HomePage() {
                   <Search className="absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2 text-red-500" />
                   <input
                     type="text"
-                    placeholder="Buscar promociones, comercios o categorías en Bs..."
+                    placeholder="Buscar promociones, comercios o categorías..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full rounded-xl bg-transparent py-3 pr-4 pl-11 text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400"
@@ -147,7 +147,7 @@ export default function HomePage() {
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl flex items-center gap-2">
-                  <Flame className="h-7 w-7 text-red-600 fill-red-600" /> Promociones Oficiales en Bolivianos (Bs.)
+                  <Flame className="h-7 w-7 text-red-600 fill-red-600" /> Promociones Oficiales
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 font-medium">
                   Ofertas verificadas de Makro Abasto, Pollos Cochabamba y Multicine
@@ -244,7 +244,7 @@ export default function HomePage() {
                   ¿Tienes un negocio en Bolivia?
                 </h2>
                 <p className="mt-4 text-base sm:text-lg text-white/95 font-medium leading-relaxed">
-                  Publica tus promociones en Bolivianos (Bs.) gratis y llega a miles de compradores activos en La Paz, El Alto, Santa Cruz, Cochabamba y todo el país.
+                  Publica tus promociones gratis y llega a miles de compradores activos en La Paz, El Alto, Santa Cruz y Cochabamba.
                 </p>
                 <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
                   <Button
@@ -280,12 +280,12 @@ export default function HomePage() {
                 <img src="/img/Logo.webp" alt="Yaps Logo" className="h-full w-full object-contain" />
               </div>
               <span className="font-black text-slate-900 text-lg">
-                Yap<span className="text-red-600">s</span> <span className="text-xs font-bold text-amber-500">Bolivia (Bs.)</span>
+                Yap<span className="text-red-600">s</span> <span className="text-xs font-bold text-amber-500">Bolivia</span>
               </span>
             </div>
 
             <p className="text-center text-xs text-slate-500 font-semibold">
-              © 2026 Yaps — Todas las promociones de Bolivia en Bolivianos (Bs.)
+              © 2026 Yaps — Todas las promociones de Bolivia
             </p>
 
             <div className="flex gap-6 text-xs font-bold text-slate-600">
