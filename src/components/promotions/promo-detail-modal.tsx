@@ -1,6 +1,6 @@
 'use client';
 
-import { X, MapPin, Calendar, Tag, Store, Ticket, MessageSquare, Flame, CheckCircle2 } from 'lucide-react';
+import { X, MapPin, Calendar, Tag, Store, Ticket, MessageSquare, Flame, CheckCircle2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Promotion } from '@/types/admin';
 
@@ -113,8 +113,23 @@ export function PromoDetailModal({ promo, onClose }: PromoDetailModalProps) {
             </div>
           </div>
 
+          {/* External Offer Link Button if configured */}
+          {promo.link_url && promo.link_url.trim().length > 0 && (
+            <div className="pt-2">
+              <a
+                href={promo.link_url.startsWith('http') ? promo.link_url : `https://${promo.link_url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 transition-transform active:scale-95"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Ver Oferta Oficial en {promo.business_name || 'Sitio Web'}</span>
+              </a>
+            </div>
+          )}
+
           {/* Claim via WhatsApp Button */}
-          <div className="pt-3 border-t border-amber-200">
+          <div className="pt-2 border-t border-amber-200">
             <a
               href={whatsappUrl}
               target="_blank"

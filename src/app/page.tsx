@@ -18,7 +18,8 @@ import {
   Flame,
   Sparkles,
   Eye,
-  Store
+  Store,
+  ExternalLink
 } from "lucide-react";
 
 export default function HomePage() {
@@ -221,9 +222,28 @@ export default function HomePage() {
                               Bs. {promo.offer_price}
                             </span>
                           </div>
-                          <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-amber-400 text-slate-950 flex items-center gap-1">
-                            <Eye className="h-3 w-3" /> Ver Oferta
-                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (promo.link_url && promo.link_url.trim()) {
+                                const target = promo.link_url.startsWith('http') ? promo.link_url : `https://${promo.link_url}`;
+                                window.open(target, '_blank');
+                              } else {
+                                setSelectedPromo(promo);
+                              }
+                            }}
+                            className="text-[10px] font-black px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-1 transition-all shadow-sm"
+                          >
+                            {promo.link_url ? (
+                              <>
+                                <ExternalLink className="h-3 w-3 text-red-600" /> Ver Oferta
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-3 w-3" /> Ver Oferta
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
                     </div>

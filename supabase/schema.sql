@@ -102,6 +102,7 @@ create table if not exists public.promotions (
   title text not null,
   description text,
   image_url text,
+  link_url text,
   original_price numeric(12, 2),
   promo_price numeric(12, 2),
   discount_percent integer,
@@ -122,6 +123,9 @@ create table if not exists public.promotions (
     or (discount_percent >= 0 and discount_percent <= 100)
   )
 );
+
+alter table public.promotions
+  add column if not exists link_url text;
 
 create index if not exists promotions_status_idx on public.promotions (status);
 create index if not exists promotions_category_id_idx on public.promotions (category_id);

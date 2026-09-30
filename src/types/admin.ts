@@ -57,6 +57,7 @@ export interface Promotion {
   start_date?: string;
   end_date?: string;
   coupon_code?: string;
+  link_url?: string;
   views_count?: number;
   created_at: string;
 }

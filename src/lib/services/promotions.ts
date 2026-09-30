@@ -182,6 +182,7 @@ export async function getPromotions(): Promise<Promotion[]> {
         start_date: item.start_date || item.starts_at || '2026-09-25',
         end_date: item.end_date || item.ends_at || '2026-10-31',
         coupon_code: item.coupon_code || 'PROMO2026',
+        link_url: item.link_url || item.target_url || '',
         views_count: item.views_count || 0,
         created_at: item.created_at || new Date().toISOString(),
       }));
@@ -211,6 +212,7 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
       original_price: promo.original_price,
       promo_price: promo.offer_price,
       image_url: promo.image_url,
+      link_url: promo.link_url,
       status: promo.status || 'published',
     };
     if (promo.business_id && promo.business_id.length > 10) {
@@ -234,12 +236,28 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
   }
 
   const list = await getPromotions();
-  const updated = [newPromo, ...list];
+  const updated = [newPromo, ...list.filter(p => p.id !== newPromo.id)];
   setStorageData('yaps_promotions', updated);
   return newPromo;
 }
 
 export async function updatePromotion(id: string, promo: Partial<Promotion>): Promise<Promotion> {
+  let updatedItem: Promotion | null = null;
+
+  // 1. Update in local storage first
+  const currentList = getStorageData<Promotion[]>('yaps_promotions', []);
+  if (currentList && currentList.length > 0) {
+    const updatedList = currentList.map((p) => {
+      if (p.id === id) {
+        updatedItem = { ...p, ...promo };
+        return updatedItem;
+      }
+      return p;
+    });
+    setStorageData('yaps_promotions', updatedList);
+  }
+
+  // 2. Perform DB Update via Admin Client
   try {
     const supabase = createClient();
     const dbPayload: any = {};
@@ -249,23 +267,22 @@ export async function updatePromotion(id: string, promo: Partial<Promotion>): Pr
     if (promo.original_price !== undefined) dbPayload.original_price = promo.original_price;
     if (promo.offer_price !== undefined) dbPayload.promo_price = promo.offer_price;
     if (promo.image_url !== undefined) dbPayload.image_url = promo.image_url;
+    if (promo.link_url !== undefined) dbPayload.link_url = promo.link_url;
     if (promo.status !== undefined) dbPayload.status = promo.status;
+    if (promo.business_id && promo.business_id.length > 10) dbPayload.business_id = promo.business_id;
+    if (promo.category_id && promo.category_id.length > 10) dbPayload.category_id = promo.category_id;
 
     await supabase.from('promotions').update(dbPayload).eq('id', id);
   } catch (err) {
-    console.log('Actualizando promoción:', err);
+    console.log('Error actualizando promoción en Supabase:', err);
   }
 
+  // 3. Re-fetch from DB and sync storage
   const list = await getPromotions();
-  let updatedItem: Promotion | null = null;
-  const updated = list.map((p) => {
-    if (p.id === id) {
-      updatedItem = { ...p, ...promo };
-      return updatedItem;
-    }
-    return p;
-  });
-  setStorageData('yaps_promotions', updated);
+  const found = list.find((p) => p.id === id);
+  if (found) {
+    updatedItem = { ...found, ...promo };
+  }
   return updatedItem || (promo as Promotion);
 }
 
@@ -277,7 +294,7 @@ export async function deletePromotion(id: string): Promise<boolean> {
     console.log('Eliminando promoción:', err);
   }
 
-  const list = await getPromotions();
+  const list = getStorageData<Promotion[]>('yaps_promotions', []);
   const filtered = list.filter((p) => p.id !== id);
   setStorageData('yaps_promotions', filtered);
   return true;

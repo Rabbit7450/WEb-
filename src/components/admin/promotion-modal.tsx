@@ -26,6 +26,8 @@ import {
   Plus,
   ScanText,
   CheckCircle2,
+  ExternalLink,
+  Link as LinkIcon,
   X
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -629,54 +631,120 @@ export function PromotionModal({
             </div>
           </div>
 
-          {/* Cupón opcional */}
-          <div className="space-y-1.5">
-            <Label htmlFor="coupon_code" className="text-xs font-semibold">
-              Código de Cupón (Opcional)
-            </Label>
-            <Input
-              id="coupon_code"
-              placeholder="Ej: YAPS50"
-              value={formData.coupon_code || ''}
-              onChange={(e) => setFormData({ ...formData, coupon_code: e.target.value.toUpperCase() })}
-              className="rounded-xl text-xs uppercase font-mono tracking-wider"
-            />
-          </div>
-
-          {/* Selección de Imagen Promocional */}
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold flex items-center justify-between">
-              <span>Vista Previa o Preset de Imagen</span>
-              <span className="text-[10px] text-muted-foreground">Banners Oficiales de Bolivia</span>
-            </Label>
-
-            {/* Presets de imágenes de promociones */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {PRESET_IMAGES.map((item, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, image_url: item.url })}
-                  className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border text-left transition-all ${
-                    formData.image_url === item.url
-                      ? 'border-red-600 bg-red-50 ring-2 ring-red-500/30'
-                      : 'border-border/60 hover:bg-accent/40'
-                  }`}
-                >
-                  <img src={item.url} alt={item.label} className="h-14 w-full object-cover rounded-lg" />
-                  <span className="text-[10px] font-bold text-slate-800 line-clamp-1 w-full text-center">{item.label}</span>
-                </button>
-              ))}
+          {/* Enlace y Cupón (2 columnas) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="link_url" className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <ExternalLink className="h-3.5 w-3.5 text-red-600" /> Link / Enlace de la Oferta (URL)
+              </Label>
+              <Input
+                id="link_url"
+                type="url"
+                placeholder="Ej: https://facebook.com/oferta o https://minegocio.bo"
+                value={formData.link_url || ''}
+                onChange={(e) => setFormData({ ...formData, link_url: e.target.value })}
+                className="rounded-xl text-xs font-medium bg-white"
+              />
             </div>
 
-            {/* Input URL directa */}
-            <div className="flex gap-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="coupon_code" className="text-xs font-semibold">
+                Código de Cupón (Opcional)
+              </Label>
               <Input
-                placeholder="https://ejemplo.com/imagen.jpg o ruta local"
+                id="coupon_code"
+                placeholder="Ej: YAPS50"
+                value={formData.coupon_code || ''}
+                onChange={(e) => setFormData({ ...formData, coupon_code: e.target.value.toUpperCase() })}
+                className="rounded-xl text-xs uppercase font-mono tracking-wider"
+              />
+            </div>
+          </div>
+
+          {/* Carga y Selección de Imagen Promocional */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+            <Label className="text-xs font-bold text-slate-900 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ImageIcon className="h-4 w-4 text-red-600" /> Imagen de la Promoción (Para la Web)
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium">Subir archivo o pegar Link</span>
+            </Label>
+
+            {/* 1. Botón de Subir Archivo + Input URL */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="file"
+                id="promo-upload-file-input"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                      if (evt.target?.result) {
+                        setFormData((prev) => ({ ...prev, image_url: evt.target!.result as string }));
+                        toast.success('¡Imagen subida y lista para publicar!');
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('promo-upload-file-input')?.click()}
+                className="rounded-xl text-xs font-bold h-9 gap-1.5 bg-white border-amber-400 text-slate-900 hover:bg-amber-100 flex-1 shadow-sm"
+              >
+                <Upload className="h-3.5 w-3.5 text-red-600" /> Subir Archivo de Imagen
+              </Button>
+
+              <Input
+                placeholder="O pega el Link de la imagen (https://...)"
                 value={formData.image_url || ''}
                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="rounded-xl text-xs flex-1"
+                className="rounded-xl text-xs flex-1 bg-white"
               />
+            </div>
+
+            {/* Vista Previa de la Imagen */}
+            {formData.image_url && (
+              <div className="flex items-center gap-3 p-2 rounded-xl bg-white border border-slate-200">
+                <img
+                  src={formData.image_url}
+                  alt="Vista Previa de la Oferta"
+                  className="h-16 w-24 object-cover rounded-lg border border-slate-300 shadow-sm"
+                />
+                <div className="flex-1 overflow-hidden">
+                  <span className="text-[10px] font-bold text-emerald-600 block flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Imagen asignada correctamente para la web
+                  </span>
+                  <span className="text-[10px] text-slate-500 truncate block font-mono mt-0.5">{formData.image_url}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Presets oficiales de Bolivia */}
+            <div className="space-y-1 pt-1">
+              <span className="text-[10px] font-bold text-slate-600 block">O elige uno de los Banners Oficiales:</span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {PRESET_IMAGES.map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, image_url: item.url })}
+                    className={`flex flex-col items-center gap-1 p-1.5 rounded-xl border text-left transition-all ${
+                      formData.image_url === item.url
+                        ? 'border-red-600 bg-red-50 ring-2 ring-red-500/30'
+                        : 'border-slate-200 hover:bg-slate-100 bg-white'
+                    }`}
+                  >
+                    <img src={item.url} alt={item.label} className="h-12 w-full object-cover rounded-lg" />
+                    <span className="text-[10px] font-bold text-slate-800 line-clamp-1 w-full text-center">{item.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
