@@ -431,24 +431,22 @@ export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): 
   const updatedList = [newUser, ...filteredList];
   setStorageData('yaps_users', updatedList);
 
-  // 2. Insert to Supabase DB profiles table
+  // 2. Safely attempt insert to Supabase DB profiles table
   try {
     const supabase = createClient();
-    const { data: res, error } = await supabase.from('profiles').insert([{
-      name: data.name,
+    const payload: any = {
       email: data.email,
       role: data.role,
-      password: data.password || '123456',
-      status: data.status || 'active',
-      business_id: data.business_id,
-      business_name: data.business_name
-    }]).select().single();
+    };
+    if (data.name) payload.name = data.name;
+    if (data.status) payload.status = data.status;
 
+    const { data: res, error } = await supabase.from('profiles').insert([payload]).select().single();
     if (!error && res) {
       newUser.id = String(res.id);
     }
-  } catch (err) {
-    console.log('Almacenando usuario en caché local:', err);
+  } catch {
+    // Graceful fallback to local cache
   }
 
   return newUser;
@@ -457,9 +455,17 @@ export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): 
 export async function updateUser(id: string, data: Partial<UserAccount>): Promise<UserAccount> {
   try {
     const supabase = createClient();
-    await supabase.from('profiles').update(data).eq('id', id);
-  } catch (err) {
-    console.log('Actualizando usuario localmente:', err);
+    const updatePayload: any = {};
+    if (data.name) updatePayload.name = data.name;
+    if (data.email) updatePayload.email = data.email;
+    if (data.role) updatePayload.role = data.role;
+    if (data.status) updatePayload.status = data.status;
+
+    if (Object.keys(updatePayload).length > 0) {
+      await supabase.from('profiles').update(updatePayload).eq('id', id);
+    }
+  } catch {
+    // Graceful fallback
   }
 
   const list = await getUsers();
