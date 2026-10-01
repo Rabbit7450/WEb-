@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserRole, UserAccount } from '@/types/admin';
-import { getUsers, createUser } from '@/lib/services/promotions';
+import { createClient } from '@/lib/supabase/client';
+import { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -11,10 +12,47 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   login: (email: string, password?: string, role?: UserRole) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+async function resolveAccount(supabase: SupabaseClient, authUser: SupabaseUser) {
+  const [{ data: profile, error: profileError }, { data: adminMembership, error: adminError }] =
+    await Promise.all([
+      supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', authUser.id)
+        .maybeSingle(),
+      supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', authUser.id)
+        .maybeSingle(),
+    ]);
+
+  if (adminError) {
+    throw new Error('No se pudieron validar los permisos. Aplica la migración de administradores en Supabase.');
+  }
+  if (profileError) throw new Error(profileError.message);
+  if (!profile) throw new Error('Tu usuario no tiene un perfil activo en Supabase.');
+
+  const role: UserRole = adminMembership ? 'admin' : 'user';
+
+  return {
+    role,
+    account: {
+      id: authUser.id,
+      name: profile.full_name || authUser.email || 'Usuario',
+      email: authUser.email || '',
+      avatar_url: profile.avatar_url || undefined,
+      role,
+      status: 'active' as const,
+      created_at: authUser.created_at,
+    } satisfies UserAccount,
+  };
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserAccount | null>(null);
@@ -22,88 +60,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkInitialAuth();
-  }, []);
-
-  const checkInitialAuth = async () => {
-    setIsLoading(true);
-    if (typeof window !== 'undefined') {
-      const storedLoggedIn = localStorage.getItem('admin_logged_in');
-      const storedUserId = localStorage.getItem('yaps_user_id');
-
-      if (storedLoggedIn === 'true' && storedUserId) {
-        const usersList = await getUsers();
-        const found = usersList.find((u) => u.id === storedUserId);
-
-        if (found && found.status === 'active') {
-          setUser(found);
-          setRole(found.role);
-        } else if (found && found.status === 'inactive') {
-          toast.error('Tu cuenta ha sido dada de baja por el administrador.');
-          logout();
-        } else {
-          logout();
+    let isMounted = true;
+    const restoreSession = async () => {
+      const supabase = createClient();
+      try {
+        const { data: { user: authUser }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (!authUser) {
+          if (isMounted) {
+            setUser(null);
+            setRole('user');
+          }
+          return;
         }
-      } else {
-        setUser(null);
+
+        const resolved = await resolveAccount(supabase, authUser);
+        if (isMounted) {
+          setUser(resolved.account);
+          setRole(resolved.role);
+        }
+      } catch {
+        await supabase.auth.signOut();
+        if (isMounted) {
+          setUser(null);
+          setRole('user');
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-    }
-    setIsLoading(false);
-  };
+    };
+
+    void restoreSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const login = async (email: string, password?: string, selectedRole: UserRole = 'admin'): Promise<boolean> => {
     setIsLoading(true);
+    const supabase = createClient();
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanPassword = (password || '').trim();
-
-      const usersList = await getUsers();
-      
-      // Find matching user by email
-      const matchedUser = usersList.find((u) => u.email.trim().toLowerCase() === cleanEmail);
-
-      if (!matchedUser) {
-        toast.error('Correo no registrado. La creación de nuevos administradores solo se permite desde el panel de control.');
-        setIsLoading(false);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password || '',
+      });
+      if (error || !data.user) {
+        toast.error('Correo o contraseña incorrectos. Verifica que la cuenta exista en Supabase Auth.');
         return false;
       }
 
-      // Validate account status
-      if (matchedUser.status === 'inactive') {
-        toast.error('Esta cuenta se encuentra inactiva o dada de baja por el Administrador.');
-        setIsLoading(false);
+      const resolved = await resolveAccount(supabase, data.user);
+      if (selectedRole === 'admin' && resolved.role !== 'admin') {
+        await supabase.auth.signOut();
+        toast.error('Esta cuenta no está autorizada como administradora en Supabase.');
         return false;
       }
 
-      // Validate password
-      if (matchedUser.password && cleanPassword !== matchedUser.password) {
-        toast.error('Contraseña incorrecta. Revisa e ingresa nuevamente tu clave.');
-        setIsLoading(false);
-        return false;
-      }
-
-      toast.success(`¡Bienvenido, ${matchedUser.name}! (${matchedUser.role === 'admin' ? 'Administrador' : 'Usuario Comercial'})`);
-
-      setUser(matchedUser);
-      setRole(matchedUser.role);
-      localStorage.setItem('admin_logged_in', 'true');
-      localStorage.setItem('yaps_user_id', matchedUser.id);
-      localStorage.setItem('yaps_user_role', matchedUser.role);
-
-      setIsLoading(false);
+      setUser(resolved.account);
+      setRole(resolved.role);
+      toast.success(`¡Bienvenido, ${resolved.account.name}! (${resolved.role === 'admin' ? 'Administrador' : 'Usuario Comercial'})`);
       return true;
-    } catch {
-      toast.error('Error al verificar las credenciales');
-      setIsLoading(false);
+    } catch (error) {
+      await supabase.auth.signOut();
+      toast.error(error instanceof Error ? error.message : 'Error al verificar las credenciales');
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('admin_logged_in');
-    localStorage.removeItem('yaps_user_id');
-    localStorage.removeItem('yaps_user_role');
+  const logout = async () => {
+    try {
+      await createClient().auth.signOut();
+    } finally {
+      setUser(null);
+      setRole('user');
+    }
   };
 
   return (

@@ -119,8 +119,8 @@ const INITIAL_CATEGORIES: Category[] = [
 ];
 
 const INITIAL_USERS: UserAccount[] = [
-  { id: 'u1', name: 'Administrador Principal', email: 'admin@yaps.bo', password: '123456', role: 'admin', status: 'active', created_at: new Date().toISOString() },
-  { id: 'u2', name: 'Adalit TIC Admin', email: 'adalit.tic@gmail.com', password: 'Jhack0', role: 'admin', status: 'active', created_at: new Date().toISOString() },
+  { id: 'u1', name: 'Administrador Principal', email: 'admin@yaps.bo', role: 'admin', status: 'active', created_at: new Date().toISOString() },
+  { id: 'u2', name: 'Adalit TIC Admin', email: 'adalit.tic@gmail.com', role: 'admin', status: 'active', created_at: new Date().toISOString() },
 ];
 
 const INITIAL_ADS_CONFIG: GoogleAdsConfig = {
@@ -203,7 +203,8 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
     views_count: 0
   };
 
-  try {
+  const hasDatabaseBusiness = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(promo.business_id);
+  if (hasDatabaseBusiness) {
     const supabase = createClient();
     const dbPayload: any = {
       title: promo.title,
@@ -215,10 +216,10 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
       link_url: promo.link_url,
       status: promo.status || 'published',
     };
-    if (promo.business_id && promo.business_id.length > 10) {
+    if (promo.business_id && hasDatabaseBusiness) {
       dbPayload.business_id = promo.business_id;
     }
-    if (promo.category_id && promo.category_id.length > 10) {
+    if (promo.category_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(promo.category_id)) {
       dbPayload.category_id = promo.category_id;
     }
 
@@ -228,11 +229,9 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
       .select()
       .single();
 
-    if (!error && data) {
-      newPromo.id = String(data.id);
-    }
-  } catch (err) {
-    console.log('Almacenando promoción en base de datos:', err);
+    if (error) throw new Error(`Supabase rechazó la creación: ${error.message}`);
+    if (!data) throw new Error('Supabase no confirmó la creación de la promoción.');
+    newPromo.id = String(data.id);
   }
 
   const list = await getPromotions();
@@ -449,6 +448,11 @@ export async function deleteCategory(id: string): Promise<boolean> {
 // USERS & ROLES Persistence
 export async function getUsers(): Promise<UserAccount[]> {
   let localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
+  localList = localList.map((user) => {
+    const account = { ...user };
+    delete account.password;
+    return account;
+  });
   
   // Ensure the 2 official accounts are always present
   INITIAL_USERS.forEach((initUser) => {
@@ -457,10 +461,10 @@ export async function getUsers(): Promise<UserAccount[]> {
       localList.push(initUser);
     } else {
       // Update passwords to ensure exact match
-      localList = localList.map((u) => 
-        u.email.toLowerCase() === initUser.email.toLowerCase() 
-          ? { ...u, password: initUser.password, role: initUser.role, status: 'active' } 
-          : u
+      localList = localList.map((user) =>
+        user.email.toLowerCase() === initUser.email.toLowerCase()
+          ? { ...user, role: initUser.role, status: 'active' }
+          : user
       );
     }
   });
@@ -480,7 +484,6 @@ export async function getUsers(): Promise<UserAccount[]> {
             id: String(item.id || existing?.id || `u-${Date.now()}`),
             name: item.name || item.full_name || existing?.name || 'Usuario',
             email: item.email || existing?.email || '',
-            password: item.password || existing?.password || '123456',
             avatar_url: item.avatar_url || existing?.avatar_url,
             role: item.role || existing?.role || 'admin',
             business_id: item.business_id || existing?.business_id,
@@ -502,11 +505,15 @@ export async function getUsers(): Promise<UserAccount[]> {
 }
 
 export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): Promise<UserAccount> {
-  const localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
+  const localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS).map((user) => {
+    const account = { ...user };
+    delete account.password;
+    return account;
+  });
   const newUser: UserAccount = {
     ...data,
     id: `u-${Date.now()}`,
-    password: data.password || '123456',
+    password: undefined,
     status: data.status || 'active',
     created_at: new Date().toISOString(),
   };

@@ -65,6 +65,11 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.admin_users (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 -- ---------------------------------------------------------------------------
 -- Negocios
 -- ---------------------------------------------------------------------------
@@ -208,9 +213,19 @@ create trigger on_auth_user_created
 alter table public.cities enable row level security;
 alter table public.categories enable row level security;
 alter table public.profiles enable row level security;
+alter table public.admin_users enable row level security;
 alter table public.businesses enable row level security;
 alter table public.promotions enable row level security;
 alter table public.favorites enable row level security;
+
+revoke all on table public.admin_users from anon, authenticated;
+grant select on table public.admin_users to anon, authenticated;
+
+drop policy if exists "admin_users_select_own" on public.admin_users;
+create policy "admin_users_select_own"
+  on public.admin_users for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
 
 drop policy if exists "cities_select_all" on public.cities;
 create policy "cities_select_all"
@@ -263,31 +278,48 @@ create policy "promotions_select_published"
       select 1
       from public.businesses b
       where b.id = promotions.business_id
-        and b.owner_id = auth.uid()
+        and b.owner_id = (select auth.uid())
+    )
+    or exists (
+      select 1
+      from public.admin_users a
+      where a.user_id = (select auth.uid())
     )
   );
 
 drop policy if exists "promotions_insert_own_business" on public.promotions;
 create policy "promotions_insert_own_business"
   on public.promotions for insert
+  to authenticated
   with check (
     exists (
       select 1
       from public.businesses b
       where b.id = business_id
-        and b.owner_id = auth.uid()
+        and b.owner_id = (select auth.uid())
+    )
+    or exists (
+      select 1
+      from public.admin_users a
+      where a.user_id = (select auth.uid())
     )
   );
 
 drop policy if exists "promotions_update_own_business" on public.promotions;
 create policy "promotions_update_own_business"
   on public.promotions for update
+  to authenticated
   using (
     exists (
       select 1
       from public.businesses b
       where b.id = promotions.business_id
-        and b.owner_id = auth.uid()
+        and b.owner_id = (select auth.uid())
+    )
+    or exists (
+      select 1
+      from public.admin_users a
+      where a.user_id = (select auth.uid())
     )
   )
   with check (
@@ -295,19 +327,30 @@ create policy "promotions_update_own_business"
       select 1
       from public.businesses b
       where b.id = promotions.business_id
-        and b.owner_id = auth.uid()
+        and b.owner_id = (select auth.uid())
+    )
+    or exists (
+      select 1
+      from public.admin_users a
+      where a.user_id = (select auth.uid())
     )
   );
 
 drop policy if exists "promotions_delete_own_business" on public.promotions;
 create policy "promotions_delete_own_business"
   on public.promotions for delete
+  to authenticated
   using (
     exists (
       select 1
       from public.businesses b
       where b.id = promotions.business_id
-        and b.owner_id = auth.uid()
+        and b.owner_id = (select auth.uid())
+    )
+    or exists (
+      select 1
+      from public.admin_users a
+      where a.user_id = (select auth.uid())
     )
   );
 

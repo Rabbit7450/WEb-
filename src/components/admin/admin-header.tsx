@@ -14,11 +14,11 @@ interface AdminHeaderProps {
 }
 
 export function AdminHeader({ title, subtitle, onNewPromotion, onToggleMobileMenu }: AdminHeaderProps) {
-  const { user, role, logout } = useAuth();
+  const { role, logout } = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     router.push('/login');
   };
 
