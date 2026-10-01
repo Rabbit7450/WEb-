@@ -242,23 +242,9 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
 }
 
 export async function updatePromotion(id: string, promo: Partial<Promotion>): Promise<Promotion> {
-  let updatedItem: Promotion | null = null;
+  const isDatabaseId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-  // 1. Update in local storage first
-  const currentList = getStorageData<Promotion[]>('yaps_promotions', []);
-  if (currentList && currentList.length > 0) {
-    const updatedList = currentList.map((p) => {
-      if (p.id === id) {
-        updatedItem = { ...p, ...promo };
-        return updatedItem;
-      }
-      return p;
-    });
-    setStorageData('yaps_promotions', updatedList);
-  }
-
-  // 2. Perform DB Update via Admin Client
-  try {
+  if (isDatabaseId) {
     const supabase = createClient();
     const dbPayload: any = {};
     if (promo.title !== undefined) dbPayload.title = promo.title;
@@ -272,18 +258,33 @@ export async function updatePromotion(id: string, promo: Partial<Promotion>): Pr
     if (promo.business_id && promo.business_id.length > 10) dbPayload.business_id = promo.business_id;
     if (promo.category_id && promo.category_id.length > 10) dbPayload.category_id = promo.category_id;
 
-    await supabase.from('promotions').update(dbPayload).eq('id', id);
-  } catch (err) {
-    console.log('Error actualizando promoción en Supabase:', err);
+    const { data, error } = await supabase
+      .from('promotions')
+      .update(dbPayload)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Supabase rechazó la actualización: ${error.message}`);
+    }
+    if (!data) {
+      throw new Error('No se guardó la promoción. Verifica que tu cuenta tenga permisos para editarla.');
+    }
   }
 
-  // 3. Re-fetch from DB and sync storage
+  const currentList = getStorageData<Promotion[]>('yaps_promotions', []);
+  const existing = currentList.find((item) => item.id === id);
+  const updatedItem = { ...existing, ...promo, id } as Promotion;
+  setStorageData(
+    'yaps_promotions',
+    currentList.map((item) => item.id === id ? updatedItem : item)
+  );
+
+  if (!isDatabaseId) return updatedItem;
+
   const list = await getPromotions();
-  const found = list.find((p) => p.id === id);
-  if (found) {
-    updatedItem = { ...found, ...promo };
-  }
-  return updatedItem || (promo as Promotion);
+  return { ...updatedItem, ...list.find((item) => item.id === id) };
 }
 
 export async function deletePromotion(id: string): Promise<boolean> {

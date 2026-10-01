@@ -310,7 +310,7 @@ export function PromotionModal({
       toast.success(promotion ? 'Promoción actualizada con éxito' : 'Promoción creada con éxito');
       onClose();
     } catch (err) {
-      toast.error('Error al guardar la promoción');
+      toast.error(err instanceof Error ? err.message : 'Error al guardar la promoción');
     } finally {
       setLoading(false);
     }
