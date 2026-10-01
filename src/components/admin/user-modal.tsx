@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, User, ShieldCheck, Mail, Building2, Lock } from 'lucide-react';
+import { X, User, ShieldCheck, Mail, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,6 @@ interface UserModalProps {
 export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [] }: UserModalProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('user');
   const [businessId, setBusinessId] = useState('');
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
@@ -29,14 +28,12 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
     if (userAccount) {
       setName(userAccount.name || '');
       setEmail(userAccount.email || '');
-      setPassword(userAccount.password || '');
       setRole(userAccount.role || 'user');
       setBusinessId(userAccount.business_id || '');
       setStatus(userAccount.status || 'active');
     } else {
       setName('');
       setEmail('');
-      setPassword('');
       setRole('user');
       setBusinessId(businesses[0]?.id || '');
       setStatus('active');
@@ -50,27 +47,21 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
       return;
     }
 
-    if (!userAccount && !password.trim()) {
-      toast.error('Debes asignar una contraseña para la nueva cuenta');
-      return;
-    }
-
     setLoading(true);
     try {
       const selectedBiz = businesses.find((b) => b.id === businessId);
       await onSave({
         name,
         email,
-        password: password.trim() || '123456',
         role,
         business_id: role === 'user' ? businessId : undefined,
         business_name: role === 'user' ? selectedBiz?.name : undefined,
         status,
       });
-      toast.success(userAccount ? '¡Usuario actualizado!' : '¡Usuario creado exitosamente con sus credenciales!');
+      toast.success(userAccount ? '¡Usuario actualizado!' : `Invitación enviada a ${email.trim()}.`);
       onClose();
-    } catch {
-      toast.error('Ocurrió un error al guardar el usuario');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ocurrió un error al guardar el usuario');
     } finally {
       setLoading(false);
     }
@@ -80,7 +71,7 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-card border border-border/60 shadow-2xl">
+      <div className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl bg-card border border-border/60 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -89,10 +80,10 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
             </div>
             <div>
               <h2 className="font-bold text-base text-foreground">
-                {userAccount ? 'Editar Usuario y Credenciales' : 'Crear Nuevo Usuario y Credenciales'}
+                {userAccount ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
               </h2>
               <p className="text-xs text-muted-foreground">
-                Define el nombre, correo, clave y rol de acceso
+                {userAccount ? 'Actualiza el perfil y los permisos de acceso' : 'Invitaremos a esta persona para que active su cuenta por correo'}
               </p>
             </div>
           </div>
@@ -115,7 +106,7 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="usr-email" className="text-xs font-semibold flex items-center gap-1">
                 <Mail className="h-3.5 w-3.5 text-primary" /> Correo Electrónico *
@@ -127,27 +118,14 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-10 rounded-xl text-xs"
+                disabled={Boolean(userAccount)}
                 required
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="usr-pass" className="text-xs font-semibold flex items-center gap-1">
-                <Lock className="h-3.5 w-3.5 text-primary" /> Contraseña *
-              </Label>
-              <Input
-                id="usr-pass"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-10 rounded-xl text-xs"
-                required={!userAccount}
-              />
-            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="usr-role" className="text-xs font-semibold flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Rol del Sistema
@@ -180,7 +158,7 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
           {role === 'user' && businesses.length > 0 && (
             <div className="space-y-1.5 animate-in fade-in">
               <Label htmlFor="usr-biz" className="text-xs font-semibold flex items-center gap-1">
-                <Building2 className="h-3.5 w-3.5 text-primary" /> Negocio Vinculado
+                <Building2 className="h-3.5 w-3.5 text-primary" /> Negocio (Opcional)
               </Label>
               <select
                 id="usr-biz"
@@ -188,7 +166,7 @@ export function UserModal({ isOpen, onClose, onSave, userAccount, businesses = [
                 onChange={(e) => setBusinessId(e.target.value)}
                 className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs focus:ring-2 focus:ring-primary outline-none"
               >
-                <option value="">Sin negocio específico</option>
+                <option value="">Persona natural / sin negocio</option>
                 {businesses.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}

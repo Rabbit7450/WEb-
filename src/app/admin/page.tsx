@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
         }}
       />
 
-      <div className="px-6 space-y-6">
+      <div className="px-3 sm:px-6 space-y-6">
         {/* KPI Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="rounded-2xl border-border/50 shadow-sm bg-gradient-to-br from-card to-primary/5 hover:border-primary/30 transition-all">
@@ -343,6 +343,11 @@ export default function AdminDashboardPage() {
                         {promo.status === 'rejected' && (
                           <Badge variant="destructive" className="text-[10px] gap-1">
                             <AlertCircle className="h-3 w-3" /> Rechazada
+                          </Badge>
+                        )}
+                        {promo.status === 'sold_out' && (
+                          <Badge variant="outline" className="bg-orange-500/15 text-orange-700 border-orange-500/30 text-[10px] gap-1">
+                            <AlertCircle className="h-3 w-3" /> Agotada
                           </Badge>
                         )}
                       </td>

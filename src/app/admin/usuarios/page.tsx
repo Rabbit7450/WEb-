@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, ShieldCheck, UserCheck, Mail, Building2, Pencil, Trash2, Search, CheckCircle2, XCircle, Power } from 'lucide-react';
+import { Users, Plus, ShieldCheck, UserCheck, Mail, Building2, Pencil, Trash2, Search, CheckCircle2, XCircle, Power, KeyRound, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { AdminHeader } from '@/components/admin/admin-header';
 import { UserModal } from '@/components/admin/user-modal';
 import { DeleteConfirmModal } from '@/components/admin/delete-confirm-modal';
-import { getUsers, createUser, updateUser, deleteUser, getBusinesses } from '@/lib/services/promotions';
+import { getUsers, createUser, updateUser, deleteUser, getBusinesses, sendPasswordResetEmail } from '@/lib/services/promotions';
 import { UserAccount, Business, UserRole } from '@/types/admin';
 import { toast } from 'sonner';
 
@@ -25,6 +25,7 @@ export default function AdminUsersPage() {
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserAccount | null>(null);
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -72,6 +73,23 @@ export default function AdminUsersPage() {
     toast.success(`Rol de ${user.name} cambiado a: ${newRole === 'admin' ? 'Administrador' : 'Usuario'}`);
   };
 
+  const handlePasswordReset = async (user: UserAccount) => {
+    if (!user.email) {
+      toast.error('Este usuario no tiene un correo registrado en Supabase Auth.');
+      return;
+    }
+
+    setResettingUserId(user.id);
+    try {
+      await sendPasswordResetEmail(user.email);
+      toast.success(`Solicitud enviada a ${user.email}. Si la cuenta existe, recibirá un enlace para cambiar su contraseña.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo solicitar el restablecimiento.');
+    } finally {
+      setResettingUserId(null);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (userToDelete) {
       await deleteUser(userToDelete.id);
@@ -90,7 +108,7 @@ export default function AdminUsersPage() {
     <div className="flex-1 space-y-6 pb-12">
       <AdminHeader
         title="Gestión de Usuarios y Roles"
-        subtitle="Control total sobre accesos del sistema: alta, edición, baja/inactivación y eliminación de cuentas"
+        subtitle="Control total sobre accesos del sistema: altas, edición, invitación y activación de cuentas para personas naturales y negocios"
         onNewPromotion={() => {
           setSelectedUser(null);
           setIsModalOpen(true);
@@ -126,7 +144,7 @@ export default function AdminUsersPage() {
             <div>
               <CardTitle className="text-base font-bold text-foreground">Cuentas Registradas ({users.length})</CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Control de roles: Administradores globales y Usuarios de comercios afiliados
+                Control de roles: administradores del sistema y personas o negocios con acceso autorizado
               </CardDescription>
             </div>
           </CardHeader>
@@ -186,7 +204,7 @@ export default function AdminUsersPage() {
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 border-emerald-500/30 text-[10px] gap-1 cursor-pointer">
-                              <UserCheck className="h-3 w-3" /> Usuario / Negocio
+                              <UserCheck className="h-3 w-3" /> Persona / Negocio
                             </Badge>
                           )}
                         </button>
@@ -216,6 +234,20 @@ export default function AdminUsersPage() {
 
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => void handlePasswordReset(usr)}
+                            disabled={resettingUserId !== null}
+                            className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
+                            title="Enviar enlace de restablecimiento al correo"
+                            aria-label={`Enviar enlace de restablecimiento a ${usr.email}`}
+                          >
+                            {resettingUserId === usr.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <KeyRound className="h-3.5 w-3.5" />}
+                          </Button>
+
                           <Button
                             variant="ghost"
                             size="sm"

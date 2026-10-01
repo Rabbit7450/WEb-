@@ -1,4 +1,4 @@
-export type PromotionStatus = 'draft' | 'pending' | 'published' | 'expired' | 'rejected';
+export type PromotionStatus = 'draft' | 'pending' | 'published' | 'expired' | 'rejected' | 'sold_out';
 export type UserRole = 'admin' | 'user';
 
 export interface UserAccount {

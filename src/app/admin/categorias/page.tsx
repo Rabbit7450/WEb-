@@ -78,7 +78,7 @@ export default function AdminCategoriesPage() {
         }}
       />
 
-      <div className="px-6 space-y-6">
+      <div className="px-3 sm:px-6 space-y-6">
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground font-medium">
             Total categorías activas: <span className="font-bold text-foreground">{categories.length}</span>

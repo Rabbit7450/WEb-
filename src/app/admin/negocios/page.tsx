@@ -52,9 +52,13 @@ export default function AdminBusinessesPage() {
 
   const handleConfirmDelete = async () => {
     if (bizToDelete) {
-      await deleteBusiness(bizToDelete.id);
-      setBusinesses((prev) => prev.filter((b) => b.id !== bizToDelete.id));
-      toast.success('Negocio eliminado correctamente');
+      try {
+        await deleteBusiness(bizToDelete.id);
+        setBusinesses((prev) => prev.filter((b) => b.id !== bizToDelete.id));
+        toast.success('Negocio eliminado correctamente');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el negocio.');
+      }
     }
   };
 
@@ -81,7 +85,7 @@ export default function AdminBusinessesPage() {
         }}
       />
 
-      <div className="px-6 space-y-6">
+      <div className="px-3 sm:px-6 space-y-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

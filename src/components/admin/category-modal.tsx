@@ -73,7 +73,7 @@ export function CategoryModal({ isOpen, onClose, onSave, category }: CategoryMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-card border border-border/60 shadow-2xl">
+      <div className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-3xl bg-card border border-border/60 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -108,7 +108,7 @@ export function CategoryModal({ isOpen, onClose, onSave, category }: CategoryMod
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="cat-slug" className="text-xs font-semibold">Slug URL</Label>
               <Input

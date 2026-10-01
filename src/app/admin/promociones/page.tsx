@@ -106,7 +106,7 @@ export default function AdminPromotionsPage() {
         }}
       />
 
-      <div className="px-6 space-y-6">
+      <div className="px-3 sm:px-6 space-y-6">
         {/* Controls Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
           {/* Tabs Filter */}
@@ -115,6 +115,7 @@ export default function AdminPromotionsPage() {
               <TabsTrigger value="all" className="rounded-lg text-xs font-semibold">Todas ({promotions.length})</TabsTrigger>
               <TabsTrigger value="published" className="rounded-lg text-xs font-semibold">Publicadas</TabsTrigger>
               <TabsTrigger value="draft" className="rounded-lg text-xs font-semibold">Borradores</TabsTrigger>
+              <TabsTrigger value="sold_out" className="rounded-lg text-xs font-semibold">Agotadas</TabsTrigger>
               <TabsTrigger value="expired" className="rounded-lg text-xs font-semibold">Expiradas</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -172,6 +173,11 @@ export default function AdminPromotionsPage() {
                       {promo.status === 'draft' && (
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-md">
                           Borrador
+                        </span>
+                      )}
+                      {promo.status === 'sold_out' && (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-600 text-white shadow-md">
+                          Agotada
                         </span>
                       )}
                     </div>

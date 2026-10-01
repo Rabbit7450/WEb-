@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { AdminNavigationContext } from '@/components/admin/admin-navigation-context';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Toaster } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -47,20 +48,19 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex relative overflow-x-hidden">
-      {/* Responsive Sidebar (Desktop & Mobile Drawer) */}
-      <AdminSidebar
-        isOpenMobile={isMobileOpen}
-        onCloseMobile={() => setIsMobileOpen(false)}
-      />
+    <AdminNavigationContext.Provider value={() => setIsMobileOpen(true)}>
+      <div className="min-h-screen bg-background text-foreground flex relative overflow-x-hidden">
+        <AdminSidebar
+          isOpenMobile={isMobileOpen}
+          onCloseMobile={() => setIsMobileOpen(false)}
+        />
 
-      {/* Main Content Area */}
-      <main className="w-full md:ml-64 min-h-screen flex flex-col bg-muted/20 overflow-x-hidden">
-        {/* Inject mobile toggle handler into children via React clone or page props if needed */}
-        {children}
-      </main>
+        <main className="w-full min-w-0 md:ml-64 min-h-screen flex flex-col bg-muted/20 overflow-x-hidden">
+          {children}
+        </main>
 
-      <Toaster position="top-right" richColors />
-    </div>
+        <Toaster position="top-right" richColors />
+      </div>
+    </AdminNavigationContext.Provider>
   );
 }

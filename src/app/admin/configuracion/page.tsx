@@ -100,7 +100,7 @@ export default function AdminSettingsPage() {
         subtitle="Control de Google Ads, monetización con publicidad y ajustes globales del sistema"
       />
 
-      <div className="px-6 space-y-6 max-w-5xl">
+      <div className="w-full px-3 sm:px-6 space-y-6 max-w-5xl">
         {/* Navigation Tabs */}
         <div className="flex items-center gap-2 border-b border-border/40 pb-2 overflow-x-auto">
           <button

@@ -75,7 +75,7 @@ export function BusinessModal({ isOpen, onClose, onSave, business }: BusinessMod
       toast.success(business ? '¡Negocio actualizado con éxito!' : '¡Negocio registrado correctamente!');
       onClose();
     } catch (err) {
-      toast.error('Ocurrió un error al guardar el negocio');
+      toast.error(err instanceof Error ? err.message : 'Ocurrió un error al guardar el negocio');
     } finally {
       setLoading(false);
     }
@@ -85,7 +85,7 @@ export function BusinessModal({ isOpen, onClose, onSave, business }: BusinessMod
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-card border border-border/60 shadow-2xl">
+      <div className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl bg-card border border-border/60 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/30 px-6 py-4">
           <div className="flex items-center gap-2.5">
@@ -120,7 +120,7 @@ export function BusinessModal({ isOpen, onClose, onSave, business }: BusinessMod
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="biz-slug" className="text-xs font-semibold">Slug URL</Label>
               <Input
@@ -161,7 +161,7 @@ export function BusinessModal({ isOpen, onClose, onSave, business }: BusinessMod
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="biz-addr" className="text-xs font-semibold flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 text-primary" /> Dirección

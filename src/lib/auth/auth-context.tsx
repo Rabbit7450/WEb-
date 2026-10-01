@@ -22,7 +22,7 @@ async function resolveAccount(supabase: SupabaseClient, authUser: SupabaseUser) 
     await Promise.all([
       supabase
         .from('profiles')
-        .select('full_name, avatar_url')
+        .select('full_name, avatar_url, status')
         .eq('id', authUser.id)
         .maybeSingle(),
       supabase
@@ -37,6 +37,7 @@ async function resolveAccount(supabase: SupabaseClient, authUser: SupabaseUser) 
   }
   if (profileError) throw new Error(profileError.message);
   if (!profile) throw new Error('Tu usuario no tiene un perfil activo en Supabase.');
+  if (profile.status === 'inactive') throw new Error('Esta cuenta está inactiva. Contacta a un administrador.');
 
   const role: UserRole = adminMembership ? 'admin' : 'user';
 
@@ -48,7 +49,7 @@ async function resolveAccount(supabase: SupabaseClient, authUser: SupabaseUser) 
       email: authUser.email || '',
       avatar_url: profile.avatar_url || undefined,
       role,
-      status: 'active' as const,
+      status: profile.status === 'inactive' ? 'inactive' as const : 'active' as const,
       created_at: authUser.created_at,
     } satisfies UserAccount,
   };

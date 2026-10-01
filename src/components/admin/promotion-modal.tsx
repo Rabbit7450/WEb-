@@ -86,8 +86,8 @@ export function PromotionModal({
     business_id: businesses[0]?.id || '',
     category_id: categories[0]?.id || '',
     city_name: 'La Paz',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    start_date: '',
+    end_date: '',
     coupon_code: '',
   });
 
@@ -123,8 +123,8 @@ export function PromotionModal({
         category_id: defaultCat?.id || '',
         category_name: defaultCat?.name || 'General',
         city_name: defaultBiz?.city_name || 'La Paz',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        start_date: '',
+        end_date: '',
         coupon_code: 'YAPS' + Math.floor(100 + Math.random() * 900),
       });
     }
@@ -586,7 +586,7 @@ export function PromotionModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label htmlFor="start_date" className="text-[11px] font-semibold">
-                Fecha Inicio
+                Fecha Inicio (Opcional)
               </Label>
               <Input
                 id="start_date"
@@ -599,7 +599,7 @@ export function PromotionModal({
 
             <div className="space-y-1">
               <Label htmlFor="end_date" className="text-[11px] font-semibold">
-                Fecha Expiración
+                Fecha Expiración (Opcional)
               </Label>
               <Input
                 id="end_date"
@@ -616,7 +616,7 @@ export function PromotionModal({
               </Label>
               <Select
                 value={formData.status || 'published'}
-                onValueChange={(val: any) => setFormData({ ...formData, status: val })}
+                onValueChange={(val) => setFormData({ ...formData, status: val as Promotion['status'] })}
               >
                 <SelectTrigger className="rounded-xl h-9 text-xs font-semibold">
                   <SelectValue />
@@ -626,6 +626,7 @@ export function PromotionModal({
                   <SelectItem value="draft" className="text-xs text-amber-600 font-semibold">Borrador</SelectItem>
                   <SelectItem value="pending" className="text-xs text-blue-600 font-semibold">En Revisión</SelectItem>
                   <SelectItem value="expired" className="text-xs text-rose-600 font-semibold">Expirada</SelectItem>
+                  <SelectItem value="sold_out" className="text-xs text-orange-600 font-semibold">Agotada (sin stock)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

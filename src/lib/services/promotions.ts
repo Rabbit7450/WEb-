@@ -12,14 +12,14 @@ const INITIAL_PROMOTIONS: Promotion[] = [
     original_price: 22,
     offer_price: 18.5,
     image_url: '/img/Promo/Arroz-MakroAbasto.jpeg',
+    city_name: 'La Paz / El Alto',
+    start_date: '2026-09-25',
+    end_date: '2026-10-31',
     status: 'published',
     business_id: 'b-makro',
     business_name: 'Makro Abasto - Gran Vía',
     category_id: 'c-supermercado',
     category_name: 'Supermercado',
-    city_name: 'La Paz / El Alto',
-    start_date: '2026-09-25',
-    end_date: '2026-10-31',
     coupon_code: 'GRAVY185',
     views_count: 540,
     created_at: new Date().toISOString(),
@@ -118,11 +118,6 @@ const INITIAL_CATEGORIES: Category[] = [
   { id: 'c3', name: 'Entretenimiento', slug: 'entretenimiento', icon: 'Film', description: 'Cines, bowling, parques y actividades recreativas.' },
 ];
 
-const INITIAL_USERS: UserAccount[] = [
-  { id: 'u1', name: 'Administrador Principal', email: 'admin@yaps.bo', role: 'admin', status: 'active', created_at: new Date().toISOString() },
-  { id: 'u2', name: 'Adalit TIC Admin', email: 'adalit.tic@gmail.com', role: 'admin', status: 'active', created_at: new Date().toISOString() },
-];
-
 const INITIAL_ADS_CONFIG: GoogleAdsConfig = {
   enabled: true,
   client_id: 'ca-pub-6370743227565174',
@@ -156,6 +151,64 @@ function setStorageData<T>(key: string, data: T): void {
   }
 }
 
+function toDateInput(value?: string | null): string {
+  return value ? value.slice(0, 10) : '';
+}
+
+function toDatabaseDate(value?: string): string | null {
+  return value?.trim() ? `${value.trim()}T00:00:00` : null;
+}
+
+function slugify(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function mapBusinessRow(row: any): Business {
+  return {
+    id: String(row.id),
+    name: row.name,
+    slug: row.slug,
+    description: row.description || '',
+    logo_url: row.logo_url || undefined,
+    address: row.address || '',
+    phone: row.phone || '',
+    city_name: row.cities?.name || row.city_name || '',
+    is_verified: row.is_verified ?? false,
+  };
+}
+
+async function resolveCityId(cityName?: string): Promise<string | null> {
+  const name = cityName?.trim();
+  if (!name) return null;
+
+  const supabase = createClient();
+  const { data: existing, error: lookupError } = await supabase
+    .from('cities')
+    .select('id')
+    .eq('name', name)
+    .maybeSingle();
+
+  if (lookupError) throw new Error(`No se pudo buscar la ciudad: ${lookupError.message}`);
+  if (existing) return existing.id;
+
+  const departments: Record<string, string> = {
+    'La Paz': 'La Paz',
+    'El Alto': 'La Paz',
+    'Santa Cruz': 'Santa Cruz',
+    Cochabamba: 'Cochabamba',
+    Tarija: 'Tarija',
+    Sucre: 'Chuquisaca',
+  };
+  const { data: created, error: insertError } = await supabase
+    .from('cities')
+    .insert({ name, department: departments[name] || name, slug: slugify(name) })
+    .select('id')
+    .single();
+
+  if (insertError) throw new Error(`No se pudo guardar la ciudad: ${insertError.message}`);
+  return created.id;
+}
+
 // PROMOTIONS
 export async function getPromotions(): Promise<Promotion[]> {
   try {
@@ -179,8 +232,8 @@ export async function getPromotions(): Promise<Promotion[]> {
         category_id: String(item.category_id || ''),
         category_name: item.categories?.name || item.category_name || 'General',
         city_name: item.city_name || 'La Paz',
-        start_date: item.start_date || item.starts_at || '2026-09-25',
-        end_date: item.end_date || item.ends_at || '2026-10-31',
+        start_date: toDateInput(item.start_date || item.starts_at),
+        end_date: toDateInput(item.end_date || item.ends_at),
         coupon_code: item.coupon_code || 'PROMO2026',
         link_url: item.link_url || item.target_url || '',
         views_count: item.views_count || 0,
@@ -214,6 +267,8 @@ export async function createPromotion(promo: Omit<Promotion, 'id' | 'created_at'
       promo_price: promo.offer_price,
       image_url: promo.image_url,
       link_url: promo.link_url,
+      starts_at: toDatabaseDate(promo.start_date),
+      ends_at: toDatabaseDate(promo.end_date),
       status: promo.status || 'published',
     };
     if (promo.business_id && hasDatabaseBusiness) {
@@ -253,6 +308,8 @@ export async function updatePromotion(id: string, promo: Partial<Promotion>): Pr
     if (promo.offer_price !== undefined) dbPayload.promo_price = promo.offer_price;
     if (promo.image_url !== undefined) dbPayload.image_url = promo.image_url;
     if (promo.link_url !== undefined) dbPayload.link_url = promo.link_url;
+    if (promo.start_date !== undefined) dbPayload.starts_at = toDatabaseDate(promo.start_date);
+    if (promo.end_date !== undefined) dbPayload.ends_at = toDatabaseDate(promo.end_date);
     if (promo.status !== undefined) dbPayload.status = promo.status;
     if (promo.business_id && promo.business_id.length > 10) dbPayload.business_id = promo.business_id;
     if (promo.category_id && promo.category_id.length > 10) dbPayload.category_id = promo.category_id;
@@ -304,68 +361,84 @@ export async function deletePromotion(id: string): Promise<boolean> {
 export async function getBusinesses(): Promise<Business[]> {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from('businesses').select('*');
-    if (!error && data && data.length > 0) {
-      setStorageData('yaps_businesses', data);
-      return data;
-    }
+    const { data, error } = await supabase.from('businesses').select('*, cities(name)');
+    if (error) throw error;
+    const businesses = (data || []).map(mapBusinessRow);
+    setStorageData('yaps_businesses', businesses);
+    return businesses;
   } catch (err) {
     console.log('Usando almacenamiento de negocios:', err);
+    return getStorageData<Business[]>('yaps_businesses', INITIAL_BUSINESSES);
   }
-  return getStorageData<Business[]>('yaps_businesses', INITIAL_BUSINESSES);
 }
 
 export async function createBusiness(data: Omit<Business, 'id'>): Promise<Business> {
-  const newBiz: Business = {
-    ...data,
-    id: `b-${Date.now()}`,
-    is_verified: data.is_verified ?? true,
+  const supabase = createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw new Error('Debes iniciar sesión en Supabase para registrar un negocio.');
+
+  const cityId = await resolveCityId(data.city_name);
+  const payload = {
+    owner_id: user.id,
+    city_id: cityId,
+    name: data.name.trim(),
+    slug: slugify(data.slug || data.name),
+    description: data.description || null,
+    logo_url: data.logo_url || null,
+    address: data.address || null,
+    phone: data.phone || null,
+    is_verified: data.is_verified ?? false,
   };
+  const { data: row, error } = await supabase
+    .from('businesses')
+    .insert(payload)
+    .select('*, cities(name)')
+    .single();
 
-  try {
-    const supabase = createClient();
-    const { data: res, error } = await supabase.from('businesses').insert([data]).select().single();
-    if (!error && res) {
-      newBiz.id = String(res.id);
-    }
-  } catch (err) {
-    console.log('Almacenando negocio localmente:', err);
-  }
-
-  const list = await getBusinesses();
-  const updated = [newBiz, ...list];
-  setStorageData('yaps_businesses', updated);
+  if (error) throw new Error(`Supabase rechazó el negocio: ${error.message}`);
+  const newBiz = mapBusinessRow(row);
+  const list = getStorageData<Business[]>('yaps_businesses', []);
+  setStorageData('yaps_businesses', [newBiz, ...list.filter((business) => business.id !== newBiz.id)]);
   return newBiz;
 }
 
 export async function updateBusiness(id: string, data: Partial<Business>): Promise<Business> {
-  try {
-    const supabase = createClient();
-    await supabase.from('businesses').update(data).eq('id', id);
-  } catch (err) {
-    console.log('Actualizando negocio localmente:', err);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error('No se puede actualizar un negocio que no está guardado en Supabase.');
   }
 
-  const list = await getBusinesses();
-  let updatedItem: Business | null = null;
-  const updated = list.map((b) => {
-    if (b.id === id) {
-      updatedItem = { ...b, ...data };
-      return updatedItem;
-    }
-    return b;
-  });
-  setStorageData('yaps_businesses', updated);
-  return updatedItem || (data as Business);
+  const supabase = createClient();
+  const payload: Record<string, unknown> = {};
+  if (data.name !== undefined) payload.name = data.name.trim();
+  if (data.slug !== undefined || data.name !== undefined) payload.slug = slugify(data.slug || data.name || '');
+  if (data.description !== undefined) payload.description = data.description || null;
+  if (data.logo_url !== undefined) payload.logo_url = data.logo_url || null;
+  if (data.address !== undefined) payload.address = data.address || null;
+  if (data.phone !== undefined) payload.phone = data.phone || null;
+  if (data.is_verified !== undefined) payload.is_verified = data.is_verified;
+  if (data.city_name !== undefined) payload.city_id = await resolveCityId(data.city_name);
+
+  const { data: row, error } = await supabase
+    .from('businesses')
+    .update(payload)
+    .eq('id', id)
+    .select('*, cities(name)')
+    .maybeSingle();
+
+  if (error) throw new Error(`Supabase rechazó la actualización: ${error.message}`);
+  if (!row) throw new Error('No tienes permisos para actualizar este negocio.');
+
+  const updatedBusiness = mapBusinessRow(row);
+  const list = getStorageData<Business[]>('yaps_businesses', []);
+  setStorageData('yaps_businesses', list.map((business) => business.id === id ? updatedBusiness : business));
+  return updatedBusiness;
 }
 
 export async function deleteBusiness(id: string): Promise<boolean> {
-  try {
-    const supabase = createClient();
-    await supabase.from('businesses').delete().eq('id', id);
-  } catch (err) {
-    console.log('Eliminando negocio localmente:', err);
-  }
+  const supabase = createClient();
+  const { data, error } = await supabase.from('businesses').delete().eq('id', id).select('id').maybeSingle();
+  if (error) throw new Error(`Supabase rechazó la eliminación: ${error.message}`);
+  if (!data) throw new Error('No se encontró el negocio o no tienes permisos para eliminarlo.');
 
   const list = await getBusinesses();
   const filtered = list.filter((b) => b.id !== id);
@@ -447,146 +520,103 @@ export async function deleteCategory(id: string): Promise<boolean> {
 
 // USERS & ROLES Persistence
 export async function getUsers(): Promise<UserAccount[]> {
-  let localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS);
-  localList = localList.map((user) => {
-    const account = { ...user };
-    delete account.password;
-    return account;
-  });
-  
-  // Ensure the 2 official accounts are always present
-  INITIAL_USERS.forEach((initUser) => {
-    const exists = localList.some((u) => u.email.toLowerCase() === initUser.email.toLowerCase());
-    if (!exists) {
-      localList.push(initUser);
-    } else {
-      // Update passwords to ensure exact match
-      localList = localList.map((user) =>
-        user.email.toLowerCase() === initUser.email.toLowerCase()
-          ? { ...user, role: initUser.role, status: 'active' }
-          : user
-      );
-    }
-  });
-
   try {
     const supabase = createClient();
-    const { data, error } = await supabase.from('profiles').select('*');
-    if (!error && data && data.length > 0) {
-      const mergedMap = new Map<string, UserAccount>();
-      localList.forEach((u) => mergedMap.set(u.email.toLowerCase(), u));
+    const { data, error } = await supabase.from('profiles').select('*, businesses(name)');
+    if (error) throw error;
 
-      data.forEach((item: any) => {
-        const emailKey = (item.email || '').toLowerCase();
-        if (emailKey) {
-          const existing = mergedMap.get(emailKey);
-          mergedMap.set(emailKey, {
-            id: String(item.id || existing?.id || `u-${Date.now()}`),
-            name: item.name || item.full_name || existing?.name || 'Usuario',
-            email: item.email || existing?.email || '',
-            avatar_url: item.avatar_url || existing?.avatar_url,
-            role: item.role || existing?.role || 'admin',
-            business_id: item.business_id || existing?.business_id,
-            business_name: item.business_name || existing?.business_name,
-            status: item.status || existing?.status || 'active',
-            created_at: item.created_at || existing?.created_at || new Date().toISOString(),
-          });
-        }
-      });
-      const combined = Array.from(mergedMap.values());
-      setStorageData('yaps_users', combined);
-      return combined;
-    }
+    const users: UserAccount[] = (data || []).map((item: any) => ({
+      id: String(item.id),
+      name: item.full_name || item.name || 'Usuario',
+      email: item.email || '',
+      avatar_url: item.avatar_url || undefined,
+      role: item.role === 'admin' ? 'admin' : 'user',
+      business_id: item.business_id || undefined,
+      business_name: item.businesses?.name || undefined,
+      status: item.status === 'inactive' ? 'inactive' : 'active',
+      created_at: item.created_at || new Date().toISOString(),
+    }));
+    setStorageData('yaps_users', users);
+    return users;
   } catch (err) {
     console.log('Usando almacenamiento sincronizado de usuarios:', err);
+    const cachedUsers = getStorageData<UserAccount[]>('yaps_users', []);
+    return cachedUsers.map((user) => {
+      const account = { ...user };
+      delete account.password;
+      return account;
+    });
   }
-  setStorageData('yaps_users', localList);
-  return localList;
+}
+
+export async function sendPasswordResetEmail(email: string): Promise<void> {
+  if (typeof window === 'undefined') {
+    throw new Error('La recuperación de contraseña solo puede solicitarse desde el navegador.');
+  }
+
+  const redirectTo = new URL('/auth/callback', window.location.origin);
+  redirectTo.searchParams.set('next', '/restablecer-contrasena');
+
+  const { error } = await createClient().auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: redirectTo.toString(),
+  });
+
+  if (error) throw new Error(error.message);
 }
 
 export async function createUser(data: Omit<UserAccount, 'id' | 'created_at'>): Promise<UserAccount> {
-  const localList = getStorageData<UserAccount[]>('yaps_users', INITIAL_USERS).map((user) => {
-    const account = { ...user };
-    delete account.password;
-    return account;
-  });
-  const newUser: UserAccount = {
-    ...data,
-    id: `u-${Date.now()}`,
-    password: undefined,
-    status: data.status || 'active',
-    created_at: new Date().toISOString(),
-  };
-
-  try {
-    const supabase = createClient();
-    const { data: authRes, error: authErr } = await supabase.auth.signUp({
+  const response = await fetch('/api/admin/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: data.name,
       email: data.email,
-      password: data.password || '123456',
-      options: {
-        data: {
-          full_name: data.name,
-          role: data.role,
-        }
-      }
-    });
-
-    if (!authErr && authRes?.user) {
-      newUser.id = authRes.user.id;
-      await supabase.from('profiles').upsert([{
-        id: authRes.user.id,
-        full_name: data.name,
-        role: data.role,
-      }]);
-    }
-  } catch (err) {
-    console.log('Registrando usuario en almacenamiento sincronizado:', err);
+      role: data.role,
+      business_id: data.business_id || null,
+      status: data.status || 'active',
+    }),
+  });
+  const result = await response.json() as { user?: UserAccount; error?: string };
+  if (!response.ok || !result.user) {
+    throw new Error(result.error || 'No se pudo enviar la invitación por correo.');
   }
 
-  const filteredList = localList.filter((u) => u.email.toLowerCase() !== newUser.email.toLowerCase());
-  const updatedList = [newUser, ...filteredList];
-  setStorageData('yaps_users', updatedList);
-  return newUser;
+  const users = getStorageData<UserAccount[]>('yaps_users', []);
+  setStorageData('yaps_users', [result.user, ...users.filter((user) => user.id !== result.user?.id)]);
+  return result.user;
 }
 
 export async function updateUser(id: string, data: Partial<UserAccount>): Promise<UserAccount> {
-  try {
-    const supabase = createClient();
-    const payload: any = {};
-    if (data.name) payload.full_name = data.name;
-    if (data.role) payload.role = data.role;
-
-    if (Object.keys(payload).length > 0 && id.length > 10) {
-      await supabase.from('profiles').update(payload).eq('id', id);
-    }
-  } catch (err) {
-    console.log('Actualizando perfil en Supabase:', err);
-  }
-
-  const list = await getUsers();
-  let updatedItem: UserAccount | null = null;
-  const updated = list.map((u) => {
-    if (u.id === id) {
-      updatedItem = { ...u, ...data };
-      return updatedItem;
-    }
-    return u;
+  const response = await fetch('/api/admin/users', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id,
+      name: data.name,
+      role: data.role,
+      business_id: data.business_id,
+      status: data.status,
+    }),
   });
+  const result = await response.json() as { user?: UserAccount; error?: string };
+  if (!response.ok || !result.user) throw new Error(result.error || 'No se pudo actualizar el usuario.');
+
+  const users = await getUsers();
+  const updated = users.map((user) => user.id === id ? result.user! : user);
   setStorageData('yaps_users', updated);
-  return updatedItem || (data as UserAccount);
+  return result.user;
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
-  try {
-    const supabase = createClient();
-    if (id.length > 10) {
-      await supabase.from('profiles').delete().eq('id', id);
-    }
-  } catch (err) {
-    console.log('Eliminando perfil en Supabase:', err);
-  }
+  const response = await fetch('/api/admin/users', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  const result = await response.json() as { deleted?: boolean; error?: string };
+  if (!response.ok || !result.deleted) throw new Error(result.error || 'No se pudo eliminar el usuario.');
 
-  const list = await getUsers();
+  const list = getStorageData<UserAccount[]>('yaps_users', []);
   const filtered = list.filter((u) => u.id !== id);
   setStorageData('yaps_users', filtered);
   return true;

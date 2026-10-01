@@ -39,6 +39,11 @@ export function PromoDetailModal({ promo, onClose }: PromoDetailModalProps) {
             <Flame className="h-3.5 w-3.5 fill-amber-300 text-amber-300" />
             <span>-{promo.discount_percentage}% OFF</span>
           </div>
+          {promo.status === 'sold_out' && (
+            <span className="absolute top-4 right-16 rounded-full bg-slate-950/90 px-3 py-1 text-xs font-bold text-white">
+              Agotada
+            </span>
+          )}
 
           <div className="absolute bottom-4 left-4 right-4 text-white">
             <div className="flex items-center gap-2 text-xs font-semibold text-amber-300 mb-1">
@@ -99,7 +104,7 @@ export function PromoDetailModal({ promo, onClose }: PromoDetailModalProps) {
                 <Calendar className="h-3.5 w-3.5 text-red-600" /> Válido hasta:
               </span>
               <span className="font-bold text-slate-800 block">
-                {promo.end_date}
+                {promo.end_date || 'Sin fecha límite'}
               </span>
             </div>
 
@@ -114,7 +119,7 @@ export function PromoDetailModal({ promo, onClose }: PromoDetailModalProps) {
           </div>
 
           {/* External Offer Link Button if configured */}
-          {promo.link_url && promo.link_url.trim().length > 0 && (
+          {promo.status !== 'sold_out' && promo.link_url && promo.link_url.trim().length > 0 && (
             <div className="pt-2">
               <a
                 href={promo.link_url.startsWith('http') ? promo.link_url : `https://${promo.link_url}`}
@@ -129,17 +134,23 @@ export function PromoDetailModal({ promo, onClose }: PromoDetailModalProps) {
           )}
 
           {/* Claim via WhatsApp Button */}
-          <div className="pt-2 border-t border-amber-200">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-transform active:scale-95"
-            >
-              <MessageSquare className="h-4 w-4 fill-white" />
-              <span>Reclamar esta Promoción por WhatsApp</span>
-            </a>
-          </div>
+          {promo.status === 'sold_out' ? (
+            <p className="pt-3 border-t border-amber-200 text-center text-sm font-bold text-slate-600">
+              Esta promoción ya no tiene stock.
+            </p>
+          ) : (
+            <div className="pt-2 border-t border-amber-200">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-transform active:scale-95"
+              >
+                <MessageSquare className="h-4 w-4 fill-white" />
+                <span>Reclamar esta Promoción por WhatsApp</span>
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>

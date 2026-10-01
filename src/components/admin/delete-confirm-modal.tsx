@@ -22,7 +22,7 @@ export function DeleteConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-card border border-border/60 p-6 shadow-2xl text-center space-y-4">
+      <div className="relative w-full max-w-sm max-h-[90dvh] overflow-y-auto rounded-3xl bg-card border border-border/60 p-5 sm:p-6 shadow-2xl text-center space-y-4">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/15 text-destructive">
           <AlertTriangle className="h-6 w-6" />
         </div>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
+import { useOpenAdminNavigation } from '@/components/admin/admin-navigation-context';
 
 interface AdminHeaderProps {
   title: string;
@@ -16,6 +17,7 @@ interface AdminHeaderProps {
 export function AdminHeader({ title, subtitle, onNewPromotion, onToggleMobileMenu }: AdminHeaderProps) {
   const { role, logout } = useAuth();
   const router = useRouter();
+  const openAdminNavigation = useOpenAdminNavigation();
 
   const handleLogout = async () => {
     await logout();
@@ -29,7 +31,7 @@ export function AdminHeader({ title, subtitle, onNewPromotion, onToggleMobileMen
         <Button
           variant="outline"
           size="icon"
-          onClick={onToggleMobileMenu}
+          onClick={() => (onToggleMobileMenu || openAdminNavigation)?.()}
           className="md:hidden h-9 w-9 rounded-xl border-border/60 shrink-0"
           title="Abrir menú móvil"
         >

@@ -123,6 +123,11 @@ export default function PromocionesPage() {
                     <div className="absolute top-3 left-3 bg-gradient-to-r from-red-600 to-amber-500 text-white px-3 py-1 rounded-full font-black text-xs shadow-lg flex items-center gap-1 animate-pulse">
                       -{promo.discount_percentage}% OFF
                     </div>
+                    {promo.status === 'sold_out' && (
+                      <div className="absolute top-3 right-3 rounded-full bg-slate-950/90 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                        Agotada
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-5">
@@ -157,8 +162,10 @@ export default function PromocionesPage() {
                         </span>
                       </div>
                       <button
+                        disabled={promo.status === 'sold_out'}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (promo.status === 'sold_out') return;
                           if (promo.link_url && promo.link_url.trim()) {
                             const target = promo.link_url.startsWith('http') ? promo.link_url : `https://${promo.link_url}`;
                             window.open(target, '_blank');
@@ -166,9 +173,11 @@ export default function PromocionesPage() {
                             setSelectedPromo(promo);
                           }
                         }}
-                        className="text-[10px] font-black px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-1 transition-all shadow-sm"
+                        className="text-[10px] font-black px-2.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center gap-1 transition-all shadow-sm disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                       >
-                        {promo.link_url ? (
+                        {promo.status === 'sold_out' ? (
+                          <span>Sin stock</span>
+                        ) : promo.link_url ? (
                           <>
                             <ExternalLink className="h-3 w-3 text-red-600" /> Ver Oferta
                           </>
