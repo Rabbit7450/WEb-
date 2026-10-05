@@ -95,15 +95,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Supabase no devolvió el usuario invitado.' }, { status: 502 });
   }
 
-  const profilePayload = {
+  const profilePayload: Record<string, unknown> = {
     id: invite.user.id,
     email,
     full_name: name,
     role,
     business_id: businessId,
-    status,
   };
-  const { error: profileError } = await admin.from('profiles').upsert(profilePayload, { onConflict: 'id' });
+  if (status === 'inactive') profilePayload.status = status;
+
+  let profileError = null;
+  const upsertProfile = async (payload: Record<string, unknown>) => {
+    const { error } = await admin.from('profiles').upsert(payload, { onConflict: 'id' });
+    return error;
+  };
+
+  profileError = await upsertProfile(profilePayload);
+  if (profileError && /column .*status.*does not exist|status.*does not exist/i.test(profileError.message)) {
+    delete profilePayload.status;
+    profileError = await upsertProfile(profilePayload);
+  }
   if (profileError) {
     await admin.auth.admin.deleteUser(invite.user.id);
     return NextResponse.json({ error: `No se pudo guardar el perfil: ${profileError.message}` }, { status: 500 });
@@ -178,12 +189,27 @@ export async function PATCH(request: NextRequest) {
   if (body.business_id !== undefined) profilePayload.business_id = body.business_id || null;
   if (body.status !== undefined) profilePayload.status = body.status;
 
-  const { data: profile, error: profileError } = await admin
-    .from('profiles')
-    .update(profilePayload)
-    .eq('id', body.id)
-    .select('*, businesses(name)')
-    .maybeSingle();
+  let profile: any = null;
+  let profileError = null;
+  const runProfileUpdate = async (payload: Record<string, unknown>) => {
+    return admin
+      .from('profiles')
+      .update(payload)
+      .eq('id', body.id)
+      .select('*, businesses(name)')
+      .maybeSingle();
+  };
+
+  const firstUpdate = await runProfileUpdate(profilePayload);
+  profile = firstUpdate.data;
+  profileError = firstUpdate.error;
+
+  if (profileError && /column .*status.*does not exist|status.*does not exist/i.test(profileError.message)) {
+    delete profilePayload.status;
+    const retryUpdate = await runProfileUpdate(profilePayload);
+    profile = retryUpdate.data;
+    profileError = retryUpdate.error;
+  }
 
   if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
   if (!profile) return NextResponse.json({ error: 'No se encontró el perfil.' }, { status: 404 });

@@ -18,25 +18,44 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 async function resolveAccount(supabase: SupabaseClient, authUser: SupabaseUser) {
-  const [{ data: profile, error: profileError }, { data: adminMembership, error: adminError }] =
-    await Promise.all([
-      supabase
-        .from('profiles')
-        .select('full_name, avatar_url, status')
-        .eq('id', authUser.id)
-        .maybeSingle(),
-      supabase
-        .from('admin_users')
-        .select('user_id')
-        .eq('user_id', authUser.id)
-        .maybeSingle(),
-    ]);
+  let profile: any = null;
+  let profileError: any = null;
+
+  const primaryProfileQuery = supabase
+    .from('profiles')
+    .select('full_name, avatar_url, status')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  const primaryProfile = await primaryProfileQuery;
+  profile = primaryProfile.data;
+  profileError = primaryProfile.error;
+
+  if (profileError && /column .*status.*does not exist|status.*does not exist/i.test(profileError.message)) {
+    const fallback = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    profile = fallback.data;
+    profileError = fallback.error;
+  }
+
+  const [{ data: adminMembership, error: adminError }] = await Promise.all([
+    supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', authUser.id)
+      .maybeSingle(),
+  ]);
 
   if (adminError) {
     throw new Error('No se pudieron validar los permisos. Aplica la migración de administradores en Supabase.');
   }
   if (profileError) throw new Error(profileError.message);
   if (!profile) throw new Error('Tu usuario no tiene un perfil activo en Supabase.');
+
+  const status = typeof profile.status === 'string' && profile.status === 'inactive' ? 'inactive' : 'active';
   if (profile.status === 'inactive') throw new Error('Esta cuenta está inactiva. Contacta a un administrador.');
 
   const role: UserRole = adminMembership ? 'admin' : 'user';
@@ -49,7 +68,7 @@ async function resolveAccount(supabase: SupabaseClient, authUser: SupabaseUser) 
       email: authUser.email || '',
       avatar_url: profile.avatar_url || undefined,
       role,
-      status: profile.status === 'inactive' ? 'inactive' as const : 'active' as const,
+      status,
       created_at: authUser.created_at,
     } satisfies UserAccount,
   };
